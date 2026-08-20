@@ -1,0 +1,423 @@
+===============================================================
+         CUBITIX STUDIOS - BOT DISCORD ALL IN ONE
+              HƯỚNG DẪN SỬ DỤNG (Tiếng Việt)
+===============================================================
+
+Chào bạn! Đây là bot Discord "tất cả trong một" do Cubitix Studios
+phát triển. Làm theo các bước dưới đây là chạy được ngay, KHÔNG cần
+biết code, KHÔNG cần gõ lệnh terminal.
+
+---------------------------------------------------------------
+BƯỚC 0: CÀI NODE.JS (chỉ làm 1 lần duy nhất)
+---------------------------------------------------------------
+1. Vào trang: https://nodejs.org
+2. Tải bản "LTS" (khuyên dùng, phiên bản 18 trở lên).
+3. Cài như phần mềm bình thường (bấm Next liên tục là xong).
+
+---------------------------------------------------------------
+BƯỚC 1: LẤY TOKEN VÀ THÔNG TIN BOT
+---------------------------------------------------------------
+1. Vào: https://discord.com/developers/applications
+2. Bấm "New Application" -> đặt tên (vd: Cubitix Studios).
+3. Vào mục "Bot" bên trái -> bấm "Reset Token" -> "Copy" để lấy TOKEN.
+4. Kéo xuống phần "Privileged Gateway Intents", BẬT cả 3 công tắc:
+   - PRESENCE INTENT
+   - SERVER MEMBERS INTENT
+   - MESSAGE CONTENT INTENT
+   (Rất quan trọng! Không bật bot sẽ không đọc được tin nhắn.)
+5. Vào mục "OAuth2" -> "General": copy "CLIENT ID" (dãy số dài).
+6. Mời bot vào máy chủ: vào "OAuth2" -> "URL Generator",
+   tích "bot" và "applications.commands", chọn quyền "Administrator"
+   (cho tiện), copy link ở dưới, dán vào trình duyệt và mời bot.
+
+---------------------------------------------------------------
+BƯỚC 2: ĐIỀN THÔNG TIN VÀO FILE .env
+---------------------------------------------------------------
+1. Trong thư mục này có file tên là: .env.example
+2. Đổi tên (copy) nó thành: .env  (đúng dấu chấm ở đầu, không có .txt)
+3. Mở file .env bằng Notepad và điền:
+   - DISCORD_TOKEN = token bạn copy ở Bước 1
+   - CLIENT_ID     = client id bạn copy ở Bước 1
+   - GUILD_ID      = ID máy chủ của bạn (tùy chọn, để đăng lệnh nhanh)
+   - OWNER_ID      = ID Discord của bạn (để dùng lệnh chủ bot)
+   Các mục khác có thể để nguyên mặc định.
+
+4. Phần Lời chào mừng / Tạm biệt (mới):
+   - WELCOME_CHANNEL_ID = ID kênh gửi lời CHÀO MỪNG người mới
+   - GOODBYE_CHANNEL_ID = ID kênh gửi lời TẠM BIỆT người rời đi
+     (để trống thì dùng chung kênh với chào mừng)
+   - WELCOME_ENABLED    = true / false  -> bật hay tắt lời chào mừng
+   - GOODBYE_ENABLED    = true / false  -> bật hay tắt lời tạm biệt
+   - INVITE_TRACKING    = true / false  -> bật hay tắt đếm lượt mời
+
+   * Đây chỉ là MẶC ĐỊNH. Trong Discord, quản trị viên vẫn có thể bật/tắt
+     và đổi kênh riêng cho từng máy chủ bằng lệnh:  !welcome
+
+   * Cách lấy ID: Vào Discord -> Cài đặt -> Nâng cao -> bật
+     "Chế độ nhà phát triển", rồi bấm chuột phải để "Copy ID".
+
+---------------------------------------------------------------
+BƯỚC 3: CÀI THƯ VIỆN (chỉ làm 1 lần)
+---------------------------------------------------------------
+- Bấm đúp vào file:  CAI_DAT.bat
+- Chờ nó chạy xong (dòng chữ [OK] Da cai xong!).
+
+---------------------------------------------------------------
+BƯỚC 4: CHẠY BOT
+---------------------------------------------------------------
+Có 2 cách chạy:
+
+  A) CHẠY ẨN (không hiện cửa sổ terminal - KHUYÊN DÙNG):
+     -> Bấm đúp vào file:  START_BOT_AN_TERMINAL.vbs
+     -> Bot chạy ngầm, không có cửa sổ đen nào hiện lên.
+
+  B) CHẠY CÓ CỬA SỔ (để xem log, tiện kiểm tra lỗi):
+     -> Bấm đúp vào file:  START_BOT.bat
+
+---------------------------------------------------------------
+BƯỚC 5: TẮT BOT
+---------------------------------------------------------------
+- Bấm đúp vào file:  TAT_BOT.bat
+- Hoặc nếu chạy bằng cách B thì chỉ cần đóng cửa sổ đen.
+
+---------------------------------------------------------------
+ĐĂNG LỆNH GẠCH CHÉO (SLASH COMMANDS) - TÙY CHỌN
+---------------------------------------------------------------
+- Bot đã tự động đăng lệnh slash khi khởi động (nếu bật ENABLE_SLASH=true).
+- Nếu muốn đăng thủ công, mở cửa sổ lệnh trong thư mục và gõ:
+      npm run deploy
+- Lệnh prefix (mặc định "!") luôn dùng được, vd: !help
+
+---------------------------------------------------------------
+CÁCH DÙNG LỆNH
+---------------------------------------------------------------
+- Gõ  !help  (hoặc  /help ) để xem toàn bộ danh sách lệnh.
+- Gõ  !help <tên lệnh>  để xem chi tiết một lệnh cụ thể.
+- Prefix mặc định là dấu:  !
+
+---------------------------------------------------------------
+DANH SÁCH LỆNH THEO NHÓM
+---------------------------------------------------------------
+[Thông tin]  help, ping, botinfo, serverinfo, userinfo, avatar, roleinfo, servericon, channelinfo,
+           roles, membercount
+[Giải trí]  8ball, cointoss, dice, rps, joke, ship, say, roast, quote, rate, emojify, choose,
+           wyr, fact, pray, curse
+[Tiện ích]  poll, calc, timer, base64, embed, reverse, remind, qrcode, color, afk, password, checklist, prefix (đổi prefix riêng cho từng server)
+[Quản lý]  antispam, kick, ban, unban, clear, slowmode, lock, unlock, warn, timeout, untimeout, nick, giverole
+           • antispam on|off|status: bật/tắt hệ thống chống spam (mặc định BẬT, cần quyền Quản lý máy chủ)
+[Kinh tế]  cash (tên cũ: balance vẫn dùng được), give, profile, daily, work, leaderboard (gõ tắt: top), shop, buy, quest
+[Câu cá]  fish, aquarium, sellfish, fishdex, fishstats, fishtop
+[Sòng bài]  slots, blackjack, coinflip, mines, highlow
+[Trò chơi]  guess, tictactoe, trivia
+[Giveaway]  giveaway (viết tắt: gw, quaythuong, tangqua)
+           • Tạo đợt quay thưởng có nút bấm, đếm ngược và tự công bố người thắng.
+           • Cần quyền Quản lý tin nhắn.
+           • Ví dụ:  !gw 1d 3 Nitro Classic
+                     !gw 12h 1 @VIP #kênh-sự-kiện Thẻ Steam
+                     /giveaway thời_gian:2h số_người_thắng:2 phần_thưởng:100k
+           • Tùy chọn chung: yêu cầu vai trò, yêu cầu tuổi tài khoản, chọn kênh đăng.
+           • Tùy chọn chỉ có ở /giveaway (vì prefix không phân biệt được hai lần nhắc vai trò):
+               - mô_tả               : thêm lời giới thiệu trong embed
+               - vai_trò_thưởng      : vai trò được cộng thêm lượt bốc thăm
+               - lượt_thưởng        : cộng thêm bao nhiêu lượt (1-10, mặc định 1)
+               - ghim_tin_nhắn      : ghim tin nhắn giveaway, tự bỏ ghim khi kết thúc
+               - chủ_đợt_tham_gia   : cho phép người tổ chức tự tham gia (mặc định: KHÔNG)
+               - nhắn_người_thắng  : nhắn riêng cho người thắng (mặc định: CÓ)
+           • Nút: 🎉 Tham gia (bấm lại để rời) – 👥 Danh sách – ⏹️ Kết thúc sớm – 🚫 Huỷ đợt – 🎲 Quay lại.
+               - Kết thúc sớm: bốc thăm ngay và công bố người thắng.
+               - Huỷ đợt: dừng luôn, KHÔNG bốc thăm, không có người thắng.
+               - Quay lại: bốc người thắng mới, không bao giờ chọn trùng ai đã từng thắng đợt đó.
+           • Người thắng đã rời máy chủ sẽ bị loại và bot bốc bù người khác cho đủ giải.
+           • Mỗi máy chủ chạy tối đa 25 đợt cùng lúc; thời lượng từ 10 giây đến 60 ngày.
+           • Giveaway được lưu vào data/giveaways.json nên KHÔNG mất khi tắt/bật lại bot.
+           • Phần thưởng và mô tả được chứa @everyone, @here, tag người và tag vai trò:
+               - Nếu người tạo có quyền "Nhắc đến @everyone" ở kênh đăng thì bot hò thật
+                 @everyone/@here và tag được mọi vai trò.
+               - Không có quyền đó thì vẫn tag được người và các vai trò cho phép nhắc tự do;
+                 @everyone/@here chỉ hiện ra chữ chứ không kêu. Bot không bao giờ cho ai
+                 ping vượt quyền của chính họ, và bản xác nhận sẽ nói rõ vì sao không ping.
+               - Dòng ping nằm ngoài khung embed, vì mention bên trong embed không báo cho ai cả.
+               - Bản công bố người thắng chỉ ping người thắng, không hò lại cả máy chủ.
+
+            gwlist (viết tắt: giveawaylist, danhsachgiveaway, gwds)
+           • Xem các đợt giveaway đang diễn ra và vừa kết thúc của máy chủ,
+             kèm thời điểm kết thúc, số người tham gia và liên kết tới từng tin nhắn.
+           • Ai cũng xem được. Các đợt đã kết thúc được giữ 7 ngày để còn quay lại được.
+[Lệnh say]  say — nói thay bot, hỗ trợ nhiều định dạng của Discord
+           • Ping theo ĐÚNG quyền của bạn, xét ngay tại kênh nhận tin:
+               - Có quyền "Nhắc đến @everyone": hò được @everyone/@here và tag mọi vai trò.
+               - Không có quyền đó: vẫn tag được người và các vai trò cho phép nhắc tự do.
+               - Bot không bao giờ trở thành đường vòng để ping vượt quyền.
+               - Bản thân bot cũng phải có quyền "Nhắc đến @everyone" thì @everyone mới kêu.
+           • Muốn im hoàn toàn: thêm --noping (hoặc chọn cho_ping: Không ở /say).
+           • --channel và --anon vẫn cần quyền Quản lý tin nhắn.
+           • Gõ !say --help để xem toàn bộ cờ định dạng (embed, màu, trường, ảnh, trả lời…).
+
+[Hiệu ứng]  loading, hack, typewriter, firework, rainbow, matrix, heartbeat
+
+CÁCH KIẾM XU (chỉ 4 nguồn):
+- !daily                  : điểm danh mỗi ngày nhận xu (chuỗi liên tiếp càng dài thưởng càng nhiều: +25 xu mỗi ngày chuỗi, tối đa +750 xu).
+- !profile [@người]        : xem hồ sơ tổng hợp (ví, tài sản, xếp hạng, bể cá, chuỗi điểm danh).
+- !work                   : đi làm kiếm xu (10 phút/lần, mỗi lần 40–119 xu).
+- Cờ bạc: !slots, !blackjack, !coinflip (đoán trúng thắng x1.95, sai thì mất cược). Giới hạn cược tối đa 250.000 xu/lượt (kể cả `all`).
+- Câu cá: !fish (10 xu/lượt) rồi bán cá trong bể để lấy xu.
+
+BẢNG XẾP HẠNG (!top) — CÓ PHÂN TRANG:
+- !top [hạng mục] [trang]  : bảng xếp hạng, MỖI TRANG ĐÚNG 10 NGƯỜI (không còn cắt cụt ở top 10).
+                            Gõ tắt: !lb, !bxh, !rank. Ví dụ: !top ca 2  (xem trang 2 bảng cá)
+                            5 hạng mục:
+                              cash    : nhiều xu nhất
+                              ca      : câu được nhiều cá nhất
+                              loaica  : sưu tầm được nhiều loài nhất
+                              mayman  : điểm may mắn (karma) cao nhất
+                              streak  : chuỗi điểm danh dài nhất
+                            Hàng nút điều hướng:
+                              ⏮️ trang đầu · ◀️ trang trước · ▶️ trang sau · ⏭️ trang cuối
+                            Hàng nút tiện ích:
+                              🎯 Hạng của tôi : nhảy thẳng tới trang có tên bạn
+                              🔄 Làm mới      : tải lại số liệu mới nhất
+                              ✖️ Đóng         : tắt bảng ngay
+                            Menu thả xuống cho phép đổi hạng mục tại chỗ, khỏi gõ lại lệnh.
+                            Top 1-2-3 mang huy chương 🥇🥈🥉, dòng của bạn được đánh dấu ▸,
+                            và luôn có ô "Vị trí của bạn" cho biết bạn hạng mấy, nằm ở trang nào.
+                            Nút chỉ nghe lời người đã mở bảng; bảng tự khoá sau 3 phút.
+
+HỆ THỐNG CÂU CÁ MỚI:
+- !fish                   : đi câu cá (mất 10 xu/lần). Cá KHÔNG tự bán mà lưu vào bể cá.
+                            Có 8 độ hiếm: common, uncommon, rare, epic, mythic,
+                            legendary (vàng, lấp lánh vàng), fable (xanh da trời,
+                            lấp lánh xanh), hidden (lúc ẩn lúc hiện). 3 độ hiếm
+                            cuối có hiệu ứng "emoji động" khi câu trúng.
+- !aquarium [@người]      : xem bể cá (cá đã câu, chưa bán). Bể chứa tối đa 1000 con;
+                            đầy thì bán bớt bằng sellfish (lần câu bị chặn sẽ không bị trừ phí).
+- !sellfish               : bán cá lấy xu (bán tất cả / theo độ hiếm / giữ cá quý).
+- !fishdex                : xem danh mục toàn bộ loài cá (570 loài) và tỉ lệ sưu tầm (lưu trọn đời).
+                            Tỉ lệ ra & giá bán mỗi độ hiếm:
+                              common    : 58%       - bán 3 xu        (149 loài)
+                              uncommon  : 28%       - bán 10 xu       (122 loài)
+                              rare      : 11%       - bán 30 xu       (96 loài)
+                              epic      : 2,5%      - bán 150 xu      (79 loài)
+                              mythic    : 0,4%      - bán 1.000 xu    (37 loài)
+                              legendary : 0,08%     - bán 6.000 xu    (32 loài)
+                              fable     : 0,015%    - bán 40.000 xu   (28 loài)
+                              hidden    : 0,005%    - bán 150.000 xu  (27 loài)
+                              (Kỳ vọng ~33,9 xu/lượt câu, lãi ròng ~23,9 xu sau khi trừ phí 10 xu.)
+                              Lưu ý: cá trong bể luôn được tính theo BẢNG GIÁ HIỆN TẠI.
+- !fishstats [@người]      : thống kê câu cá (tổng lượt, lãi ròng, cá to nhất, phân bố độ hiếm).
+- !fishtop [trang]         : bảng xếp hạng cần thủ, cũng 10 người/trang với đầy đủ nút lật
+                            trang và menu như !top. Có 3 chế độ xem:
+                              📖 Bộ sưu tập     : theo số loài đã sưu tầm (mặc định)
+                              🎣 Số lượt câu    : theo tổng số lần câu
+                              🌟 Cá giá trị nhất: theo con cá đắt nhất từng câu được
+
+MỘT SỐ LỆNH ĐÁNG CHÚ Ý:
+- !slots <số xu cược>   : quay máy may mắn để nhân đôi (hoặc mất) xu.
+- !coinflip <số xu>      : cược tung đồng xu, đoán trúng thắng x1.95 (tối đa 250.000).
+- !cointoss              : tung đồng xu giải trí (SẤP/NGỬA), có nút tung lại.
+- !wyr                     : "Bạn sẽ chọn?" — bình chọn hai lựa chọn hóc búa (có thanh %).
+- !fact                    : một sự thật thú vị ngẫu nhiên.
+- !password [độ dài]       : tạo mật khẩu ngẫu nhiên mạnh (8-64 ký tự).
+- !checklist ...           : danh sách việc cần làm (add/done/xoa/clear).
+- !roles                   : liệt kê toàn bộ vai trò của máy chủ.
+- !membercount             : thống kê số thành viên (người thật/bot).
+- !nick @người [tên]     : đổi/xóa biệt danh (cần quyền Quản lý biệt danh).
+                           ĐƯỢC tự đổi biệt danh của chính mình.
+- !giverole @người @role : gắn/gỡ vai trò (cần quyền Quản lý vai trò).
+                           ĐƯỢC tự gắn/gỡ vai trò cho chính mình, nhưng chỉ với
+                           vai trò THẤP HƠN vai trò cao nhất của bạn (chống tự
+                           nâng quyền). Chủ máy chủ không bị giới hạn này.
+  Lưu ý: các lệnh phạt (kick, ban, timeout, untimeout, warn) VẪN không cho tự
+  thực hiện với chính mình.
+- !matrix / !heartbeat     : hiệu ứng mưa code và nhịp tim.
+- !mines <xu> [số bom]   : dò mìn cờ bạc lưới 3x3, mở ô an toàn để nhân tiền (tối đa 250.000).
+                          Số bom tự chỉnh 1-8, mặc định 3 nếu chỉ nhập số xu.
+                          Càng nhiều bom thì hệ số nhân càng cao (rủi ro cũng cao hơn). Ví dụ: !mines 1000 5
+- !highlow <xu>            : đoán lá bài (4 nút: thấp hơn / cao hơn / bằng / rút tiền), hệ số nhân tăng dần (tối đa 250.000).
+- !quest                   : nhiệm vụ hàng ngày, nhận thưởng xu.
+- !shop / !buy <id> [sl]   : xem cửa hàng và mua vật phẩm.
+- !pray [@người]          : cầu nguyện +1 điểm may mắn (bỏ trống = chính mình), 5 phút/lần. Không thưởng xu.
+- !curse [@người]         : nguyền rủa -1 điểm may mắn (bỏ trống = chính mình), 5 phút/lần. Không cướp xu.
+- !poll Câu hỏi | A | B  : bình chọn nhiều lựa chọn (tối đa 10).
+- !roleinfo @role         : xem thông tin một vai trò.
+- !rate <nội dung>        : chấm điểm cho vui.
+- !emojify <nội dung>     : biến chữ thành emoji to đẹp.
+- !blackjack <số xu>      : chơi xì dách với nhà cái (nút Rút/Dừng).
+- !timeout @người <10m>  : tạm khóa chat (mute) có thời hạn.
+- !untimeout @người     : gỡ timeout.
+- !unban <ID>             : gỡ cấm theo ID người dùng.
+- !servericon            : xem icon máy chủ.
+- !remind <10m> <nội dung>: đặt nhắc nhở theo thời gian.
+- !afk [lý do]            : báo tạm vắng; ai nhắc đến bạn sẽ được báo.
+- !qrcode <nội dung/URL> : tạo mã QR.
+- !color <#hex>          : xem trước một màu (ví dụ #5865F2).
+- !choose A | B | C      : bảo bot chọn giúp một lựa chọn.
+- !channelinfo [#kênh]   : xem thông tin một kênh.
+- !trivia                : đố vui trắc nghiệm giải trí (KHÔNG cộng xu), có tính chuỗi trả lời đúng.
+                           Có thể chọn độ khó/chủ đề: !trivia kho congnghe hoặc /trivia dokho:kho chude:tech
+
+===============================================================
+   [Chạy 24/7 - host bot]
+===============================================================
+- Bot đã được gia cố để chạy liên tục:
+  + Tự ghi log khi Discord ngắt kết nối, đang nối lại, đã nối lại (không còn im lặng).
+  + Nếu phiên đăng nhập bị vô hiệu (token bị đổi/thu hồi), bot thoát với mã 1 để
+    pm2 / systemd / panel host tự khởi động lại sạch sẽ.
+  + Nhận SIGINT (Ctrl+C) và SIGTERM (host restart/deploy) thì đóng kết nối tử tế
+    rồi mới thoát, tối đa 5 giây. Nhờ vậy bot không bị treo trạng thái "online ảo".
+  + Bộ chống spam tự dọn dữ liệu tạm của người đã im lặng trên 10 phút, nên bộ nhớ
+    không phình lên theo thời gian dù chạy hàng tháng.
+  + Dữ liệu có trần chống phình file: bể cá tối đa 1000 con/người, lịch sử cảnh cáo
+    giữ 100 mục gần nhất/người, giveaway đã kết thúc tự xóa sau 7 ngày.
+- Gợi ý chạy nền bằng pm2:
+    npm install -g pm2
+    pm2 start index.js --name cubitix-bot
+    pm2 logs cubitix-bot        (xem log)
+    pm2 restart cubitix-bot     (khởi động lại)
+    pm2 save && pm2 startup     (tự chạy khi máy chủ bật lại)
+- Lưu ý: lệnh !remind và !timer chạy bằng bộ nhớ tạm nên sẽ mất nếu bot khởi động lại.
+  Riêng giveaway được lưu vào data/giveaways.json và tự khôi phục sau khi bật lại.
+- Nhớ sao lưu thư mục data/ (economy.json, giveaways.json, warns.json...) định kỳ.
+
+===============================================================
+   Chúc bạn vui vẻ! - Cubitix Studios
+===============================================================
+
+===============================================================
+   [CHẾ ĐỘ BẢO TRÌ - chỉ chủ bot]  Lệnh: !baotri
+===============================================================
+- Mục đích: tạm khoá toàn bộ bot để cập nhật, sửa lỗi hay bảo trì máy chủ.
+  Khi bật, MỌI lệnh của người chơi đều bị chặn — cả lệnh prefix (!) lẫn slash (/).
+  Chỉ chủ bot và những người được miễn trừ vẫn dùng được bình thường.
+
+- Tên gọi: !maintenance, !baotri, !bao-tri, !bt, !maint, !mtn (và /maintenance).
+
+- Cách dùng:
+    !baotri                       -> mở bảng điều khiển
+    !baotri on                    -> bật bảo trì, không hẹn giờ
+    !baotri on 30m Nâng cấp DB    -> bật 30 phút, kèm lý do hiện cho người chơi
+    !baotri on 2h                 -> bật 2 tiếng
+    !baotri on 1h30m              -> bật 1 tiếng 30 phút
+    !baotri off                   -> mở lại bot cho mọi người
+    !baotri status                -> xem trạng thái + thống kê
+    !baotri allow @ai_đó          -> cho người này dùng lệnh dù đang bảo trì
+    !baotri deny @ai_đó           -> gỡ quyền miễn trừ
+    !baotri log                   -> xem nhật ký 15 thao tác gần nhất
+
+  [BẢO TRÌ RIÊNG TỪNG LỆNH — MỚI]
+    !baotri cmd work              -> chỉ khoá lệnh work, không hẹn giờ
+    !baotri cmd work 30m Sửa lỗi -> khoá lệnh work 30 phút, kèm lý do
+    !baotri cmdoff work           -> mở lại riêng lệnh work
+    !baotri cmdlist               -> xem các lệnh đang bảo trì riêng
+  + Khoá theo lệnh thì **mọi lệnh khác vẫn chạy bình thường**.
+  + Dùng được cả tên chính lẫn tên gọi tắt (ví dụ `lam` = `work`).
+  + Chủ bot và danh sách miễn trừ (người/vai trò) vẫn dùng được lệnh bị khoá.
+  + Hết hẹn giờ lệnh tự mở lại; bảng điều khiển có nút "Mở lại mọi lệnh".
+  + Không thể bảo trì chính lệnh `maintenance` (để tránh tự khoá mình).
+  + Slash: /maintenance hành_động: "Bảo trì riêng một lệnh" — ô `lệnh` có gợi ý tên lệnh.
+  (Gõ tiếng Việt có dấu hay không dấu đều được: bật / bat / tắt / tat...)
+
+- Thời lượng hợp lệ: 10 giây → 30 ngày. Viết được 30m, 2h, 1d, 1h30m, 90s,
+  hoặc chỉ một con số (ví dụ 45 = 45 phút). Để trống hoặc 0 = không hẹn giờ.
+
+- Bảng điều khiển có các nút (chỉ chủ bot bấm được, sống 3 phút):
+    Bật bảo trì / Mở lại bot • Làm mới • Nhật ký • +30 phút • Bỏ hẹn giờ • Đóng
+
+- Những điểm đã tính sẵn cho việc host 24/7:
+  + Trạng thái lưu vào data/maintenance.json nên bot khởi động lại vẫn nhớ
+    đang bảo trì. Nếu hẹn giờ đã qua trong lúc bot tắt, bot tự mở lại ngay khi bật.
+  + Người chơi spam lệnh lúc bảo trì chỉ nhận thông báo tối đa 20 giây/lần,
+    tránh bot bị Discord chặn vì gửi quá nhiều tin nhắn.
+  + Trong lúc bảo trì, trạng thái bot tự chuyển sang "Đang bảo trì" (màu đỏ),
+    tắt bảo trì thì trạng thái xoay vòng trở lại bình thường.
+  + Giveaway đang chạy vẫn đếm giờ và vẫn tham gia được bằng nút, không bị
+    bảo trì làm hủy kết quả.
+  + Nếu file maintenance.json bị sửa tay hoặc hỏng, bot tự hiểu là "không bảo trì"
+    thay vì khoá nhầm toàn bộ người chơi.
+
+===============================================================
+
+---------------------------------------------------------------
+  MIỄN TRỪ THEO NGƯỜI VÀ THEO VAI TRÒ (bản cập nhật)
+---------------------------------------------------------------
+    !baotri allow @ai_đó        -> miễn trừ cho một người
+    !baotri allow @Tên_Vai_Trò  -> miễn trừ cho CẢ VAI TRÒ (mọi người mang
+                                   vai trò này đều dùng được lệnh khi bảo trì)
+    !baotri allow everyone      -> miễn trừ cho vai trò @everyone
+    !baotri allow 1234567890... -> nhập thẳng ID (bot tự biết là người hay vai trò)
+    !baotri deny  ...           -> gỡ miễn trừ, dùng cú pháp y hệt
+  Với lệnh slash: /maintenance hành_động:allow thành_viên:@ai_đó
+                   /maintenance hành_động:allow vai_trò:@Tên_Vai_Trò
+
+  Sau mỗi lần allow/deny, bot hiện LUÔN bảng điều khiển đã cập nhật để bạn
+  thấy ngay danh sách mới, không cần gõ thêm !baotri status.
+
+  BẢNG ĐIỀU KHIỂN NAY CÓ:
+   - Thanh tiến độ phiên bảo trì (khi có hẹn giờ) + mốc đếm ngược
+   - Ô riêng cho "Người được miễn trừ" và "Vai trò được miễn trừ"
+   - Mốc thời điểm lần chặn lệnh gần nhất
+   - Menu chọn người và menu chọn vai trò: bấm chọn là thêm miễn trừ,
+     chọn lại lần nữa là gỡ (chọn được tối đa 10 mục một lần)
+   - Nút "Xoá miễn trừ" để dọn sạch cả hai danh sách
+
+---------------------------------------------------------------
+
+---------------------------------------------------------------
+LờI CHÀO MỪNG, TẠM BIỆT VÀ ĐẾM LƯỢT MờI  (MỚI)
+---------------------------------------------------------------
+- Lệnh:  !welcome   (hoặc !chaomung, !wc, /welcome)
+- Ai dùng được: CHỈ QUẢN TRỊ VIÊN (người có quyền Administrator).
+  Người thường bấm vào sẽ bị từ chối.
+
+* Các câu lệnh:
+
+    !welcome                -> mở bảng điều khiển có nút bật/tắt
+    !welcome on             -> bật CẢ chào mừng và tạm biệt
+    !welcome off            -> tắt CẢ hai
+    !welcome welcomeon      -> chỉ bật lời chào mừng
+    !welcome welcomeoff     -> chỉ tắt lời chào mừng
+    !welcome goodbyeon      -> chỉ bật lời tạm biệt
+    !welcome goodbyeoff     -> chỉ tắt lời tạm biệt
+    !welcome inviteon       -> bật đếm lượt mời
+    !welcome inviteoff      -> tắt đếm lượt mời
+    !welcome test           -> xem thử hai embed ngay tại chỗ
+    !welcome reset          -> trả mọi thiết lập về mặc định trong .env
+
+* Trên bảng điều khiển còn có 2 menu chọn kênh:
+  - Đổi kênh chào mừng
+  - Đổi kênh tạm biệt   (để trống thì dùng chung kênh chào mừng)
+  Thiết lập lưu riêng cho TẪNG MÁY CHỦ, không ảnh hưởng máy chủ khác.
+
+* ĐẾM LƯỢT MờI là gì?
+  Khi có người vào máy chủ, bot tự biết AI ĐÃ MờI người đó và người
+  mời đã mời được bao nhiêu người, rồi hiện trong lời chào mừng:
+
+      💌 Người mời — @AnTon (đã mời 12 người)
+
+  - Lượt mời còn hiệu lực = đã mời vào - đã rời đi + được tặng thêm.
+  - Ai rời máy chủ thì người mời họ bị trừ 1 lượt (không bao giờ âm).
+  - Nhận diện được cả link rút gọn riêng của máy chủ (vanity URL).
+
+  !! QUAN TRỌNG: muốn đếm được lượt mời thì BOT PHẢI CÓ QUYỀN
+     "Quản lý máy chủ" (Manage Server). Thiếu quyền thì lời chào
+     vẫn gửi bình thường, chỉ bỏ phần người mời.
+
+---------------------------------------------------------------
+BẢO TRÌ THEO TỪNG LỆNH NGAY TRÊN BẢNG ĐIỀU KHIỂN  (MỚI)
+---------------------------------------------------------------
+Trước đây muốn bảo trì riêng một lệnh thì phải gõ lệnh slash, và bảng
+điều khiển không hề hiển thị điều đó (vẫn báo "ĐANG TẮT"). Nay đã sửa:
+
+1. Gõ:  !baotri        -> mở bảng điều khiển
+2. Bấm nút:  🧰 Bảo trì theo lệnh
+3. Chọn nhóm lệnh (kinh tế, câu cá, quản lý...) từ menu thả xuống.
+4. Chọn lệnh cần khoá -> hiện ô nhập THỜI LƯỢNG và LÝ DO -> xác nhận.
+5. Muốn mở lại: chọn lệnh ở menu "Mở lại", hoặc bấm "🧹 Mở lại mọi lệnh".
+
+Bảng điều khiển nay có 3 trạng thái rõ ràng:
+
+    🔴 🔧 CHẾ ĐỘ BẢO TRÌ — ĐANG BẬT        (khoá toàn bộ bot)
+    🟡 🧰 BẢO TRÌ RIÊNG — N LỆNH ĐANG KHOÁ  (bot vẫn chạy, chỉ khoá vài lệnh)
+    🟢 ✅ CHẾ ĐỘ BẢO TRÌ — ĐANG TẮT        (bình thường)
+
+Và tất cả bảng điều khiển đang mở sẽ TỰ ĐỒNG BỘ VỚI NHAU: đổi ở một
+nơi thì các bảng khác cập nhật theo ngay lập tức.
