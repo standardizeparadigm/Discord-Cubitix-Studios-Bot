@@ -83,6 +83,45 @@ module.exports = {
       logger.warn('Không nạp được danh sách kênh: ' + err.message);
     }
 
+    // --- SỬA LỖI: khôi phục trạng thái "đang bảo trì" sau khi bot khởi động lại ---
+    // Trước đây nếu bot bị restart trong lúc đang bảo trì, trạng thái hiển thị
+    // lại trở về "online" bình thường dù chế độ bảo trì vẫn còn bật.
+    try {
+      const mt = require('../core/maintenanceStore');
+      const maintenanceCmd = require('../commands/owner/maintenance');
+      if (mt.isEnabled() && typeof maintenanceCmd.applyPresence === 'function') {
+        maintenanceCmd.applyPresence(client, true);
+        logger.warn('Chế độ bảo trì vẫn đang BẬT -> đã khôi phục trạng thái "Đang bảo trì".');
+      }
+    } catch (err) {
+      logger.warn('Không khôi phục được trạng thái bảo trì: ' + err.message);
+    }
+
+    // --- Hai hệ thống chống gian lận ---
+    // Nạp sẵn để hai công tắc toàn cục được đăng ký ngay khi bot bật (mặc định BẬT),
+    // và in trạng thái hiện tại để chủ bot dễ theo dõi.
+    try {
+      const abuseGuard = require('../core/abuseGuard');
+      const st = abuseGuard.status();
+      logger.info(
+        'Chống bot tự động: ' +
+          (st.switches.automation.on ? 'BẬT' : 'TẮT') +
+          ' | Chống acc clone: ' +
+          (st.switches.alt.on ? 'BẬT' : 'TẮT') +
+          ' | Mức độ: ' +
+          (st.config.preset || 'balanced') +
+          ' | Hồ sơ đang theo dõi: ' +
+          st.counts.profiles,
+      );
+      if (!st.switches.automation.on || !st.switches.alt.on) {
+        logger.warn(
+          'Có hệ thống chống gian lận đang TẮT trên TOÀN BỘ máy chủ. Gõ ' + config.prefix + 'antiabuse để bật lại.',
+        );
+      }
+    } catch (err) {
+      logger.warn('Không nạp được hệ thống chống gian lận: ' + err.message);
+    }
+
     logger.success('Bot đã sẵn sàng! Gõ ' + config.prefix + 'help để bắt đầu.');
   },
 };
