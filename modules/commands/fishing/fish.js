@@ -1,5 +1,7 @@
 // =============================================================
-//  Lệnh: fish - đi câu cá (mất 5 xu mỗi lần)
+//  Lệnh: fish - đi câu cá (mất FISH_COST xu mỗi lần)
+//  SỬA LỖI CHÚ THÍCH: trước đây ghi "mất 5 xu" nhưng giá thật lấy từ
+//  FISH_COST trong modules/core/fishing.js (hiện là 10 xu) -> dễ gây hiểu sai.
 //  - Cá câu được KHÔNG tự động bán, mà lưu vào bể cá (aquarium)
 //  - Muốn câu lại phải gõ lại lệnh (có cooldown chống spam)
 //  - legendary / fable / hidden có hiệu ứng "emoji động"
