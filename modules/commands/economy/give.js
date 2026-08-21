@@ -11,6 +11,7 @@ const Embed = require('../../core/EmbedFactory');
 const { colors, emoji } = require('../../core/palette');
 const db = require('../../core/Database');
 const quests = require('../../core/questLogic');
+const abuseGuard = require('../../core/abuseGuard');
 
 const CONFIRM_MS = 10 * 60 * 1000; // 10 phút để quyết định
 
@@ -85,6 +86,14 @@ module.exports = {
       return ctx.reply({ embeds: [Embed.error('Không đủ xu', `Bạn chỉ có **${fmt(senderWallet.balance)}** xu.`)] });
     }
 
+    // --- Hệ thống chống acc clone: chặn dồn xu về một tài khoản chính ---
+    // Đây là mánh phổ biến nhất: tạo hàng loạt acc clone, cày xu rồi
+    // chuyển hết về acc chính. Kiểm tra ngay trước khi hiện bảng xác nhận.
+    const guardCheck = abuseGuard.checkTransfer(ctx.client, ctx.author.id, target.id, amount);
+    if (!guardCheck.ok) {
+      return ctx.reply({ embeds: [Embed.error(guardCheck.title, guardCheck.reason)] });
+    }
+
     // --- Embed XÁC NHẬN (chưa trừ xu) ---
     const balance = senderWallet.balance;
     const after = balance - amount;
@@ -134,6 +143,15 @@ module.exports = {
         return i.update({ embeds: [insEmbed], components: [confirmRow(true)] });
       }
 
+      // Kiểm tra lại chống gian lận: 10 phút chờ có thể đủ để tài khoản bị đánh dấu.
+      const guardRecheck = abuseGuard.checkTransfer(ctx.client, ctx.author.id, target.id, amount);
+      if (!guardRecheck.ok) {
+        const blockEmbed = Embed.custom(colors.error, `${emoji.error} ${guardRecheck.title}`)
+          .setDescription(guardRecheck.reason + '\n**Không có xu nào bị trừ.**')
+          .setFooter({ text: 'Chuyển xu • Cubitix Studios' });
+        return i.update({ embeds: [blockEmbed], components: [confirmRow(true)] });
+      }
+
       const receiverWallet = db.getWallet(target.id);
       senderNow.balance -= amount;
       receiverWallet.balance += amount;
@@ -141,6 +159,13 @@ module.exports = {
       quests.track(senderNow, 'giveCount', 1);
       db.saveWallet(ctx.author.id, senderNow);
       db.saveWallet(target.id, receiverWallet);
+
+      // Ghi lại dòng chuyển xu để hệ thống chống acc clone dựng sơ đồ "ai dồn xu cho ai".
+      try {
+        abuseGuard.noteTransfer(ctx.client, ctx.author.id, target.id, amount);
+      } catch {
+        /* bỏ qua - không được làm hỏng giao dịch đã thành công */
+      }
 
       const okEmbed = Embed.custom(colors.gold, `${emoji.coin} Chuyển xu thành công`)
         .setDescription(`**${ctx.author.username}** đã cho <@${target.id}> **${fmt(amount)}** xu ${emoji.sparkles}`)
