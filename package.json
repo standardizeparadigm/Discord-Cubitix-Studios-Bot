@@ -1,7 +1,7 @@
 {
   "name": "cubitix-studios-bot",
-  "version": "2.2.0",
-  "description": "Cubitix Studios - Bot Discord All In One (nhiều lệnh, giao diện đẹp, animation, hiệu ứng, màu sắc)",
+  "version": "3.0.0-LTS",
+  "description": "Cubitix Studios - Bot Discord All In One, bản LTS (nhiều lệnh, giao diện đẹp, animation, hiệu ứng, màu sắc, chống bot tự động & chống acc clone)",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
