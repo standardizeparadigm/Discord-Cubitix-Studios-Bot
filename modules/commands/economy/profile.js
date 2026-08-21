@@ -12,7 +12,9 @@ const day = require('../../core/dayCycle');
 const WORK_COOLDOWN = 10 * 60 * 1000;
 
 function totalAssets(w) {
-  const fish = Array.isArray(w.aquarium) ? w.aquarium.reduce((a, f) => a + (f.value || 0), 0) : 0;
+  // SỬA LỖI: dùng fishing.valueOf để khớp với số xu thật khi bán cá (sellfish),
+  // tránh việc bảng xếp hạng tài sản và số xu nhận được lệch nhau.
+  const fish = Array.isArray(w.aquarium) ? w.aquarium.reduce((a, f) => a + fishing.valueOf(f), 0) : 0;
   return (w.balance || 0) + (w.bank || 0) + fish;
 }
 
@@ -58,7 +60,7 @@ module.exports = {
 
     // Giá trị bể cá
     let fishValue = 0;
-    for (const f of aquarium) fishValue += f.value || 0;
+    for (const f of aquarium) fishValue += fishing.valueOf(f);
 
     // Cá giá trị nhất từng câu được (lưu trọn đời)
     const fstats = wallet.fishStats || {};
