@@ -33,7 +33,7 @@ CubitixStudios/
 ├── config.js                # Đọc cấu hình từ .env
 ├── deploy-commands.js       # Đăng lệnh slash lên Discord
 ├── package.json
-├── .env.example             # Mẫu biến môi trường (đổi tên thành .env)
+├── .env.example             # Mẫu biến môi trường
 ├── CAI_DAT.bat              # Cài thư viện (1 lần)
 ├── START_BOT.bat            # Chạy bot (có cửa sổ)
 ├── START_BOT_AN_TERMINAL.vbs# Chạy bot ẨN (không hiện terminal)
