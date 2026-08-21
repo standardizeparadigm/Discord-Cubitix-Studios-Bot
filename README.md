@@ -200,3 +200,95 @@ Khi có người vào máy chủ, bot so sánh số lượt dùng của từng l
 > ⚠️ Bot cần quyền **Quản lý máy chủ (Manage Server)** và intent **Server Members**
 > thì mới đếm được lượt mời. Thiếu quyền thì lời chào vẫn gửi bình thường,
 > chỉ bỏ phần người mời.
+
+---
+
+## 🛡️ Chống bot tự động & Chống acc clone (bản LTS)
+
+Bản LTS bổ sung **2 hệ thống chống gian lận** nằm trong `modules/core/`, **luôn bật
+theo mặc định** và chỉ **chủ bot** mới được bật/tắt. Công tắc là **toàn cục**: chủ bot
+tắt một lần thì **tất cả máy chủ** đang có bot đều tắt theo, và bật lại cũng vậy.
+
+### 1) 🤖 Chống dùng bot/macro đánh lệnh tự động
+
+`modules/core/antiAutomation.js` chấm điểm 0–100 cho mỗi người dựa trên **7 dấu hiệu**
+độc lập, thay vì chỉ đếm số lệnh:
+
+| Dấu hiệu | Ý nghĩa |
+|---|---|
+| 🥁 Nhịp gõ | Người thật gõ lệch nhau; máy gõ đều tăm tắp (hệ số biến thiên rất thấp) |
+| ⚡ Tốc độ | Bấm nhanh hơn mức người kịp đọc/gõ, hoặc vượt số lệnh/phút của người |
+| ⏱️ Bấm theo đồng hồ | Khoảng cách giữa các lệnh dồn về đúng một bậc (vd luôn đúng 1.000ms) |
+| 🔁 Lặp lệnh | Lặp đi lặp lại một chu kỳ lệnh, độ đa dạng lệnh quá thấp |
+| 🏃 Cày liên tục | Chạy nhiều giờ liền không có quãng nghỉ nào của người |
+| 🌙 Không ngủ | Hoạt động ở gần đủ 24 giờ trong ngày, kể cả 2–5h sáng |
+| 🎯 Bấm sát cooldown | Vừa hết thời gian chờ là bấm ngay trong 0,5 giây, lặp lại nhiều lần |
+
+- Chưa đủ **12 lệnh mẫu** thì hệ thống **tuyệt đối không kết luận** → tránh oan sai.
+- Điểm càng cao thì mức xử lý càng tăng: **theo dõi (40) → bắt xác minh (62) → chặn (82)**.
+- Bị nghi thì bot mời **giải captcha ngay trong Discord** (5 loại câu đố, chỉ bấm nút),
+  giải đúng là được tha và được **cộng điểm tin cậy**.
+- Tái phạm mới bị khoá tạm theo bậc: **30 phút → 2 giờ → 12 giờ → 24 giờ**.
+- Có cơ chế **tự phục hồi**: không vi phạm thì điểm tin cậy tăng dần theo giờ.
+
+### 2) 👥 Chống tạo nhiều acc clone để farm xu
+
+`modules/core/antiAlt.js` không chỉ xem tuổi tài khoản, mà **nối các acc lại thành cụm**:
+
+- 📛 **Tuổi tài khoản** đọc trực tiếp từ ID Discord (snowflake), không cần gọi API.
+- 🖼️ **Ảnh đại diện mặc định** (chưa từng đổi avatar).
+- 🚪 **Vào máy chủ cùng lúc** — nhiều acc mới vào trong cùng một đợt.
+- 💌 **Cùng một người mời** nhiều acc mới trong 14 ngày.
+- 🔤 **Tên giống nhau** (Levenshtein + so gốc tên, vd `caythu1` / `caythu2`).
+- 🧬 **Vân hành vi trùng khớp** — cùng khung giờ, cùng bộ lệnh hay dùng.
+- 🎂 **Tạo acc cùng một đợt** (ID sinh sát nhau).
+- 💸 **Chuyển xu một chiều** — acc clone chỉ dồn xu về một acc chính mà không nhận lại
+  (phát hiện cả **phễu dồn xu** lẫn **acc chính hứng xu**).
+
+Các acc bị nối sẽ được **gom cụm bằng Union-Find** và nhận mức xử lý theo điểm rủi ro:
+
+| Mức | Điểm | Xử lý |
+|---|---|---|
+| 🟢 Bình thường | < 34 | Không ảnh hưởng gì |
+| 🟡 Theo dõi | 34+ | Chỉ ghi nhận, chưa hạn chế |
+| 🟠 Hạn chế | 55+ | Giảm xu kiếm được, chặn chuyển xu trong cùng cụm |
+| 🔴 Phong toả | 76+ | Không cho dùng lệnh kiếm xu |
+
+- **Chặn trần xu theo cụm**: cả cụm acc clone chỉ kiếm được tối đa **25.000 xu/ngày**
+  (mặc định) — nuôi 10 acc clone cũng không farm được nhiều hơn 1 acc.
+- **Chặn chuyển xu trong cùng cụm**, và chặn acc quá mới chuyển xu (mặc định 3 ngày).
+
+### 🎛️ Lệnh dành cho chủ bot: `antiabuse`
+
+Mở **bảng điều khiển** có nút bấm để:
+
+- Bật/tắt **từng hệ thống** (hiệu lực ngay trên **mọi máy chủ**).
+- Đổi **mức độ nghiêm ngặt**: 🟢 Nhẹ nhàng · 🟡 Cân bằng · 🔴 Nghiêm ngặt.
+- Xem danh sách **acc đang bị đánh dấu**, **các cụm acc clone** và **nhật ký xử lý**.
+- Chọn một thành viên để **xem báo cáo chi tiết**, **tin tưởng vĩnh viễn** (bỏ qua mọi
+  kiểm tra), **xoá án**, **gỡ liên kết cụm** hoặc **quét lại**.
+
+| Cách gõ | Việc |
+|---|---|
+| `antiabuse` | Mở bảng điều khiển |
+| `antiabuse on` / `off` | Bật/tắt **cả hai** hệ thống trên mọi máy chủ |
+| `antiabuse boton` / `botoff` | Bật/tắt riêng hệ thống chống bot tự động |
+| `antiabuse alton` / `altoff` | Bật/tắt riêng hệ thống chống acc clone |
+| `antiabuse preset strict` | Đổi mức độ (`lenient` · `balanced` · `strict`) |
+| `antiabuse check @người` | Xem báo cáo chi tiết của một người |
+| `antiabuse trust @người` | Đánh dấu tin tưởng (miễn mọi kiểm tra) |
+| `antiabuse clear @người` | Xoá án đang treo của một người |
+| `antiabuse flagged` | Danh sách acc đang bị đánh dấu |
+| `antiabuse clusters` | Danh sách các cụm acc clone |
+| `antiabuse log` | Nhật ký xử lý gần đây |
+
+### 🧩 Lệnh cho người chơi: `verify`
+
+Người bị nghi oan có thể **tự gỡ**: gõ `verify` để xem **điểm tin cậy** của mình và
+**giải captcha gỡ án ngay**. Ai không bị nghi thì chỉ thấy báo cáo "hoàn toàn bình thường".
+
+> 💡 Dữ liệu của 2 hệ thống lưu ở `data/antiAbuse.json`, trạng thái công tắc toàn cục
+> lưu ở `data/globalSwitches.json`. Cả hai **tự tạo** khi chạy lần đầu.
+
+> 🛟 Cả 2 hệ thống được thiết kế **an toàn khi lỗi (fail-open)**: nếu có sự cố bất ngờ
+> thì lệnh của người chơi **vẫn chạy bình thường**, tuyệt đối không làm bot đứng.
