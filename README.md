@@ -65,7 +65,7 @@ CubitixStudios/
 ## 🚀 Cài đặt nhanh
 
 1. Cài **Node.js 18+** từ <https://nodejs.org>.
-2. Đổi tên `.env.example` thành `.env`, điền `DISCORD_TOKEN` và `CLIENT_ID`.
+2. Đổi tên `.env.example` thành `.env`, điền `DISCORD_TOKEN`, `CLIENT_ID`, `VÀ NHỮNG THỨ ĐƯỢC YÊU CẦU TRONG .env`.
 3. Bấm đúp `CAI_DAT.bat` để cài thư viện.
 4. Bấm đúp `START_BOT_AN_TERMINAL.vbs` (chạy ẩn) hoặc `START_BOT.bat`.
 
