@@ -421,3 +421,74 @@ Bảng điều khiển nay có 3 trạng thái rõ ràng:
 
 Và tất cả bảng điều khiển đang mở sẽ TỰ ĐỒNG BỘ VỚI NHAU: đổi ở một
 nơi thì các bảng khác cập nhật theo ngay lập tức.
+
+---------------------------------------------------------------
+CHỐNG BOT TỰ ĐỘNG & CHỐNG ACC CLONE  (MỚI - BẢN LTS)
+---------------------------------------------------------------
+Bản LTS thêm 2 hệ thống chống gian lận, LUÔN BẬT SẴN, không
+cần cài thêm gì cả:
+
+  1) Chống người chơi dùng bot/macro tự động đánh lệnh.
+  2) Chống người chơi tạo nhiều acc clone để farm xu.
+
+CHỈ CHỦ BOT mới bật/tắt được, và công tắc là TOÀN CỤC:
+chủ bot tắt 1 lần thì TẤT CẢ máy chủ có bot đều tắt theo,
+bật lại cũng vậy. Không cần vào từng server để bật/tắt.
+
+>> Cách dùng nhanh (dành cho chủ bot):
+
+     cantiabuse            -> mở bảng điều khiển (có nút bấm)
+     cantiabuse off        -> tắt cả 2 hệ thống ở MỌI máy chủ
+     cantiabuse on         -> bật lại cả 2 hệ thống ở MỌI máy chủ
+     cantiabuse botoff     -> chỉ tắt hệ thống chống bot tự động
+     cantiabuse altoff     -> chỉ tắt hệ thống chống acc clone
+     cantiabuse preset strict   -> siết chặt hơn
+     cantiabuse check @người   -> xem báo cáo chi tiết 1 người
+     cantiabuse trust @người   -> tin tưởng, miễn mọi kiểm tra
+     cantiabuse flagged    -> danh sách acc đang bị đánh dấu
+     cantiabuse clusters   -> danh sách các cụm acc clone
+     cantiabuse log        -> nhật ký xử lý gần đây
+
+  (Prefix của bạn đang là "c" nên gõ liền là cantiabuse.
+   Nếu đổi prefix thì thay chữ "c" ở đầu.)
+
+>> Người chơi bị nghi oan thì làm sao?
+
+     Gõ:  cverify
+     Bot sẽ hiện điểm tin cậy và cho GIẢI CAPTCHA để gỡ án
+     ngay trong Discord (chỉ bấm nút, không phải gõ gì).
+     Giải đúng là được tha ngay và được cộng điểm tin cậy.
+
+>> Bot có bắt oan người chơi thật không?
+
+     Rất khó. Hệ thống phải thu đủ 12 lệnh mẫu mới dám kết
+     luận, và người bị nghi LUÔN được giải captcha để tự gỡ
+     trước khi bị khoá. Chỉ ai tái phạm nhiều lần mới bị khoá
+     tạm 30 phút -> 2 giờ -> 12 giờ -> 24 giờ.
+
+     Không vi phạm thì điểm tin cậy tự tăng lại theo giờ.
+
+>> Acc clone bị xử lý thế nào?
+
+     Bot nối các acc nghi là của cùng 1 người thành 1 "cụm"
+     (dựa vào tuổi acc, tên giống nhau, vào server cùng lúc,
+     cùng người mời, giờ chơi trùng nhau, và nhất là việc
+     dồn xu một chiều về 1 acc chính).
+
+     Sau đó chặn TRẦN XU CẢ CỤM (mặc định 25.000 xu/ngày).
+     Nuôi 10 acc clone cũng KHÔNG kiếm được nhiều hơn 1 acc.
+     Ngoài ra còn chặn chuyển xu qua lại trong cùng cụm, và
+     chặn acc quá mới (dưới 3 ngày) chuyển xu.
+
+>> Dữ liệu lưu ở đâu?
+
+     data/antiAbuse.json       - hồ sơ, cụm acc, nhật ký
+     data/globalSwitches.json  - trạng thái bật/tắt toàn cục
+
+     Hai file này TỰ TẠO khi chạy lần đầu, không cần tạo tay.
+
+>> Nếu 2 hệ thống gặp sự cố thì bot có đứng không?
+
+     Không. Cả 2 được thiết kế "an toàn khi lỗi": gặp sự cố
+     bất ngờ thì lệnh của người chơi VẪN CHẠY BÌNH THƯỜNG,
+     tuyệt đối không làm bot đứng hay chặn oan cả server.
