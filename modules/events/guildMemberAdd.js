@@ -8,6 +8,7 @@
 const welcomeStore = require('../core/welcomeStore');
 const inviteStore = require('../core/inviteStore');
 const greetings = require('../core/greetings');
+const abuseGuard = require('../core/abuseGuard');
 
 module.exports = {
   name: 'guildMemberAdd',
@@ -33,6 +34,18 @@ module.exports = {
           if (invite.inviterId && invite.inviterId === String(member.id)) {
             invite.inviterId = '';
           }
+        }
+      }
+
+      // --- Hệ thống chống acc clone: ghi nhận lượt vào máy chủ ---
+      // Nhiều tài khoản mới vào cùng một lúc, hoặc cùng một người mời, là
+      // dấu hiệu rất mạnh của việc tạo acc clone để cày xu.
+      // Đặt trước phần lời chào để dữ liệu luôn được ghi, kể cả khi tắt lời chào.
+      if (!member.user.bot) {
+        try {
+          abuseGuard.noteJoin(client, member, (invite && invite.inviterId) || '');
+        } catch (e) {
+          client.logger?.error?.('Lỗi ghi nhận lượt vào (chống gian lận): ' + e.message);
         }
       }
 
