@@ -25,6 +25,11 @@ const client = new Client({
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.GuildVoiceStates,
+    // SỬA LỖI: thiếu intent này nên hai sự kiện inviteCreate / inviteDelete
+    // chưa bao giờ được gọi -> bộ nhận diện người mời bị sai sau khi có
+    // lời mời mới được tạo hoặc bị xoá. Đây cũng là dữ liệu để
+    // hệ thống chống acc clone phát hiện "cùng một người mời hàng loạt acc".
+    GatewayIntentBits.GuildInvites,
   ],
   partials: [Partials.Channel, Partials.Message, Partials.Reaction],
 });
