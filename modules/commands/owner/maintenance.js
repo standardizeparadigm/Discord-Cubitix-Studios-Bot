@@ -1031,8 +1031,13 @@ module.exports = {
             note = emoji.warning + ' Đã bật bảo trì toàn bộ.';
           }
         } else if (i.customId === 'mt:ext') {
+          // SỬA LỖI: extend() trả về null khi chưa bật bảo trì, còn lại trả về
+          // getState() (không hề có thuộc tính .ok), nên điều kiện r.ok === false cũ
+          // chưa bao giờ đúng -> bảng luôn báo "đã gia hạn" dù không gia hạn được gì.
           const r = mt.extend(30 * 60000, i.user.id);
-          note = r && r.ok === false ? emoji.error + ' ' + r.error : emoji.success + ' Đã gia hạn thêm 30 phút.';
+          note = r
+            ? emoji.success + ' Đã gia hạn thêm 30 phút.'
+            : emoji.error + ' Chưa bật bảo trì toàn bộ nên không có gì để gia hạn.';
         } else if (i.customId === 'mt:notimer') {
           mt.clearTimer(i.user.id);
           note = emoji.success + ' Đã bỏ hẹn giờ \u2014 bảo trì sẽ kéo dài đến khi tắt thủ công.';
