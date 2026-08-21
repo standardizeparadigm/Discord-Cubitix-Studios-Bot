@@ -4,6 +4,7 @@
 const Embed = require('../../core/EmbedFactory');
 const { colors, emoji } = require('../../core/palette');
 const db = require('../../core/Database');
+const fishing = require('../../core/fishing');
 
 module.exports = {
   name: 'cash',
@@ -19,7 +20,10 @@ module.exports = {
     const user = ctx.getUser('thành_viên') || ctx.author;
     const wallet = db.getWallet(user.id);
     const aquarium = wallet.aquarium || [];
-    const fishValue = aquarium.reduce((a, f) => a + (f.value || 0), 0);
+    // SỬA LỖI: trước đây dùng f.value nên giá trị hiển thị KHÁC số xu thật nhận
+    // được khi bán (lệnh sellfish tính theo fishing.valueOf). Nay dùng chung một
+    // cách tính duy nhất để hai con số luôn khớp nhau.
+    const fishValue = aquarium.reduce((a, f) => a + fishing.valueOf(f), 0);
 
     const embed = Embed.custom(colors.gold, `${emoji.coin} Số dư của ${user.username}`)
       .setThumbnail(user.displayAvatarURL())
