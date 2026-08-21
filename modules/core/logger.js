@@ -20,17 +20,23 @@ function stamp() {
   return `${c.gray}[${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}]${c.reset}`;
 }
 
+// SỬA LỖI: trước đây mỗi nhãn tự chèn khoảng trắng bằng tay, riêng 'CẢNH BÁO'
+// dài 8 ký tự trong khi các nhãn khác chỉ 7 -> cột log bị lệch một ký tự.
+// Nay canh lề tự động nên mọi dòng log luôn thẳng hàng, kể cả khi thêm nhãn mới.
+const TAG_WIDTH = 8;
+
 function log(color, tag, msg) {
-  console.log(`${stamp()} ${color}${c.bold}${tag}${c.reset} ${msg}`);
+  const label = String(tag).trim().padEnd(TAG_WIDTH, ' ');
+  console.log(`${stamp()} ${color}${c.bold}${label}${c.reset} ${msg}`);
 }
 
 module.exports = {
-  info: (m) => log(c.cyan, 'INFO   ', m),
-  success: (m) => log(c.green, 'OK     ', m),
+  info: (m) => log(c.cyan, 'INFO', m),
+  success: (m) => log(c.green, 'OK', m),
   warn: (m) => log(c.yellow, 'CẢNH BÁO', m),
-  error: (m) => log(c.red, 'LỖI    ', m),
+  error: (m) => log(c.red, 'LỖI', m),
   event: (m) => log(c.magenta, 'SỰ KIỆN', m),
-  command: (m) => log(c.blue, 'LỆNH   ', m),
+  command: (m) => log(c.blue, 'LỆNH', m),
   banner: (brand) => {
     // Khung luôn cân đối dù tên thương hiệu dài hay ngắn.
     // (Trước đây dòng "All In One Discord Bot" bị lệch so với viền khung.)
