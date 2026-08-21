@@ -8,6 +8,7 @@ const afk = require('../core/afkStore');
 const db = require('../core/Database');
 const { PermissionsBitField } = require('discord.js');
 const { AntiSpamEngine } = require('../core/antiSpam');
+const abuseGuard = require('../core/abuseGuard');
 
 // Bộ máy chống spam dùng chung (bộ nhớ tạm, tự suy giảm vi phạm theo thời gian).
 const antiSpam = new AntiSpamEngine();
@@ -74,6 +75,15 @@ module.exports = {
       }
     }
 
+    // --- Hệ thống chống acc clone: ghi nhận nhịp nói chuyện ---
+    // Người thật thì có nói chuyện, acc clone thường chỉ gõ lệnh kiếm xu.
+    // Hàm này tự giới hạn tần suất bên trong nên gọi mỗi tin nhắn vẫn rất nhẹ.
+    try {
+      abuseGuard.noteMessage(client, message);
+    } catch (e) {
+      client.logger?.error?.('Lỗi ghi nhận tin nhắn (chống gian lận): ' + e.message);
+    }
+
     // Prefix riêng theo từng máy chủ (đọc lại mỗi tin nhắn -> áp dụng ngay).
     // Chỉ đọc MỘT lần rồi dùng chung, tránh đọc ổ đĩa 2 lần cho mỗi tin nhắn.
     const customPrefix = db.getPrefix(message.guild.id);
@@ -99,6 +109,12 @@ module.exports = {
       return null;
     };
 
+    // SỬA LỖI: trước đây phần AFK dùng nội dung đã .trim() còn phần nhận lệnh lại dùng
+    // nội dung thô, nên tin nhắn có khoảng trắng/xuống dòng ở đầu (vd: " !daily")
+    // bị coi là đang gọi lệnh (nên không gỡ AFK) nhưng lại KHÔNG chạy được lệnh.
+    // Nay cả hai nơi dùng chung một biến để hành vi luôn nhất quán.
+    const trimmedContent = message.content.trim();
+
     // --- Hệ thống AFK ---
     try {
       // Thông báo khi có người nhắc đến thành viên đang AFK
@@ -113,7 +129,7 @@ module.exports = {
       }
 
       // Tự gỡ AFK khi chủ nhân quay lại (trừ khi đang gọi lệnh afk)
-      const trimmed = message.content.trim();
+      const trimmed = trimmedContent;
       const afkUsed = matchPrefix(trimmed);
       const afkRest = afkUsed ? trimmed.slice(afkUsed.length).trim().toLowerCase() : '';
       const isAfkCmd = !!afkUsed && ['afk', 'nghi', 'nghingoi'].some((n) => afkRest === n || afkRest.startsWith(n + ' '));
@@ -134,15 +150,15 @@ module.exports = {
     const mentionPrefix = new RegExp(`^<@!?${client.user.id}>\\s*`);
     let used = null;
     let usedMention = false;
-    const textPrefix = matchPrefix(message.content);
+    const textPrefix = matchPrefix(trimmedContent);
     if (textPrefix !== null) {
       used = textPrefix;
-    } else if (mentionPrefix.test(message.content)) {
-      used = message.content.match(mentionPrefix)[0];
+    } else if (mentionPrefix.test(trimmedContent)) {
+      used = trimmedContent.match(mentionPrefix)[0];
       usedMention = true;
     } else return;
 
-    const args = message.content.slice(used.length).trim().split(/\s+/);
+    const args = trimmedContent.slice(used.length).trim().split(/\s+/);
     const cmdName = (args.shift() || '').toLowerCase();
     if (!cmdName) {
       // Chỉ mention bot -> gợi ý dùng help
