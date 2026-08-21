@@ -6,6 +6,7 @@ const { Collection, PermissionsBitField } = require('discord.js');
 const Embed = require('./EmbedFactory');
 const maintenance = require('./maintenanceStore');
 const { colors } = require('./palette');
+const abuseGuard = require('./abuseGuard');
 
 // Nhắc "đang bảo trì" tối đa 1 lần / 20 giây cho mỗi người, để một người
 // spam lệnh lúc bảo trì không làm bot gửi hàng loạt tin nhắn (chống rate limit).
@@ -160,6 +161,20 @@ module.exports = async function runCommand(client, command, ctx) {
         .catch(() => {});
     }
   }
+  // --- Hai hệ thống chống gian lận (chống bot tự động & chống acc clone) ---
+  // Đặt SAU kiểm tra cooldown để bộ máy đo được nhịp gõ thật của người chơi,
+  // và TRƯỚC khi ghi mốc cooldown để lệnh bị chặn không bị tính vào thời gian chờ.
+  // Cả hai hệ thống MẶC ĐỊNH BẬT và do chủ bot bật/tắt toàn cục.
+  let guardTrack = null;
+  try {
+    const verdict = await abuseGuard.guard(client, command, ctx);
+    if (verdict && !verdict.allowed) return;
+    guardTrack = (verdict && verdict.track) || null;
+  } catch (err) {
+    // Không bao giờ để hệ thống chống gian lận làm chết lệnh (fail-open).
+    client.logger?.error?.(`Lỗi hệ thống chống gian lận: ${err && err.stack ? err.stack : err}`);
+  }
+
   if (!skipCooldown) {
     timestamps.set(ctx.author.id, now);
     setTimeout(() => timestamps.delete(ctx.author.id), cooldownMs).unref?.();
@@ -169,6 +184,12 @@ module.exports = async function runCommand(client, command, ctx) {
   try {
     client.logger.command(`${ctx.author.tag || ctx.author.username} đã dùng: ${command.name}${ctx.isSlash ? ' (slash)' : ''}`);
     await command.run(ctx);
+    // Ghi số xu vừa kiếm được để áp trần xu mỗi ngày cho cụm acc clone.
+    try {
+      abuseGuard.after(client, command, ctx, guardTrack);
+    } catch {
+      /* bỏ qua - không được ảnh hưởng tới lệnh */
+    }
   } catch (err) {
     client.logger.error(`Lỗi khi chạy lệnh "${command.name}": ${err.stack || err}`);
     const emb = Embed.error('Đã xảy ra lỗi', 'Xin lỗi, có lỗi khi thực thi lệnh này. Vui lòng thử lại sau.');
