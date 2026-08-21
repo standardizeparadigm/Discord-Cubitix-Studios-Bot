@@ -161,6 +161,25 @@ function sanitizeWallet(w) {
   if (st.best && typeof st.best === 'object') st.best = { ...st.best, value: Math.max(0, Math.floor(safeNumber(st.best.value, 0))) };
   else st.best = null;
 
+  // Thống kê đố vui (trivia) — BỔ SUNG.
+  // Trước đây trường này không được làm sạch ở đây, nên một giá trị hỏng trong
+  // file JSON (NaN, chuỗi, số âm do sửa tay hoặc mất điện lúc đang ghi) sẽ được
+  // giữ lại vĩnh viễn và làm bảng thống kê trivia hiện "NaN".
+  // Chỉ làm sạch các trường đã biết, giữ nguyên trường cũ như `earned`.
+  if (w.trivia !== null && w.trivia !== undefined) {
+    if (typeof w.trivia !== 'object' || Array.isArray(w.trivia)) {
+      w.trivia = { correct: 0, wrong: 0, streak: 0, best: 0 };
+    } else {
+      const t = w.trivia;
+      t.correct = Math.max(0, Math.floor(safeNumber(t.correct, 0)));
+      t.wrong = Math.max(0, Math.floor(safeNumber(t.wrong, 0)));
+      t.streak = Math.max(0, Math.floor(safeNumber(t.streak, 0)));
+      t.best = Math.max(0, Math.floor(safeNumber(t.best, 0)));
+      // Chuỗi đúng hiện tại không thể lịch sử hơn chuỗi tốt nhất.
+      if (t.streak > t.best) t.best = t.streak;
+    }
+  }
+
   // Nhiệm vụ hằng ngày: nếu hỏng thì bỏ để hệ thống tự phát nhiệm vụ mới.
   if (w.quest !== null && w.quest !== undefined && (typeof w.quest !== 'object' || Array.isArray(w.quest))) w.quest = null;
   return w;
