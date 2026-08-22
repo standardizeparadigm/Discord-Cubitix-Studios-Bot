@@ -1,7 +1,3 @@
-// =============================================================
-//  commandHandler - FILE COMMAND RIÊNG
-//  Tự động quét thư mục modules/commands và nạp TẤT CẢ lệnh
-// =============================================================
 const fs = require('fs');
 const path = require('path');
 const buildSlash = require('../core/slashBuilder');
