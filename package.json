@@ -1,12 +1,14 @@
 {
   "name": "cubitix-studios-bot",
-  "version": "3.0.0-LTS",
-  "description": "Cubitix Studios - Bot Discord All In One, bản LTS (nhiều lệnh, giao diện đẹp, animation, hiệu ứng, màu sắc, chống bot tự động & chống acc clone)",
+  "version": "3.1.0-LTS",
+  "description": "Cubitix Studios - Bot Discord All In One, bản LTS (nhiều lệnh, giao diện đẹp, animation, hiệu ứng, màu sắc, chống bot tự động, chống acc clone & hệ thống đánh giá - xử lý warn/mute/ban)",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
     "start": "node index.js",
-    "deploy": "node deploy-commands.js"
+    "deploy": "node deploy-commands.js",
+    "selftest": "node tools/selftest.js",
+    "test": "node tools/selftest.js"
   },
   "author": "Cubitix Studios",
   "license": "MIT",
