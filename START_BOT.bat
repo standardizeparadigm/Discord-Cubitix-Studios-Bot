@@ -5,13 +5,13 @@ cd /d "%~dp0"
 
 where node >nul 2>nul
 if errorlevel 1 (
-  echo [Lỗi] Chưa cài Node.js! Xem HUONG_DAN_SU_DUNG.txt (Bước 0).
+  echo [LỖI] Chưa cài Node.js! Xem HUONG_DAN_SU_DUNG.txt (Bước 0).
   pause
   exit /b
 )
 
 if not exist ".env" (
-  echo [Lỗi] Chưa có file .env! Hãy đổi tên .env.example thành .env và điền token.
+  echo [LỖI] Chưa có file .env! Hãy đổi tên .env.example thành .env và điền token.
   pause
   exit /b
 )
