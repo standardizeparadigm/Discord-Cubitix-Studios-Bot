@@ -12,6 +12,7 @@ const { colors, emoji } = require('../../core/palette');
 const { sleep, progressBar } = require('../../core/Animator');
 const db = require('../../core/Database');
 const fishing = require('../../core/fishing');
+const aqView = require('../../core/aquariumView');
 const quests = require('../../core/questLogic');
 
 const { FISH_COST } = fishing;
@@ -166,7 +167,17 @@ module.exports = {
         return i.reply({ content: `${emoji.error} Đây không phải bể cá của bạn!`, flags: MessageFlags.Ephemeral }).catch(() => {});
       }
       const wallet = db.getWallet(ctx.author.id);
-      return i.reply({ embeds: [summarizeTank(wallet.aquarium)], flags: MessageFlags.Ephemeral }).catch(() => {});
+      return i
+        .reply({
+          embeds: [
+            summarizeTank(wallet.aquarium, {
+              name: ctx.author.globalName || ctx.author.username,
+              prefix: prefixOf(ctx),
+            }),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+        .catch(() => {});
     });
     collector.on('end', () => {
       editFn({ components: [tankRow(true)] }).catch(() => {});
@@ -174,24 +185,19 @@ module.exports = {
   },
 };
 
-// Tóm tắt nhanh bể cá (dùng cho nút "Xem bể cá")
-function summarizeTank(aquarium) {
-  if (!aquarium || !aquarium.length) {
-    return Embed.info('Bể cá trống', 'Bạn chưa câu được con cá nào. Dùng `fish` để bắt đầu!');
+// Tiền tố lệnh của server (để câu gợi ý trong embed ghi đúng lệnh).
+function prefixOf(ctx) {
+  try {
+    return db.getPrefix(ctx.guild && ctx.guild.id) || (ctx.client.config && ctx.client.config.prefix) || '';
+  } catch {
+    return '';
   }
-  const totalValue = aquarium.reduce((a, f) => a + fishing.valueOf(f), 0);
-  // Đếm theo độ hiếm
-  const byRarity = {};
-  for (const f of aquarium) {
-    const sp = fishing.speciesById(f.id);
-    const rk = sp ? sp.rarity : 'common';
-    byRarity[rk] = (byRarity[rk] || 0) + 1;
-  }
-  const lines = Object.values(fishing.RARITIES)
-    .sort((a, b) => a.order - b.order)
-    .filter((r) => byRarity[r.key])
-    .map((r) => `${r.badge} **${r.label}**: ${byRarity[r.key]} con`);
-  return Embed.custom(colors.aqua, '🐠 Bể cá của bạn', lines.join('\n')).setFooter({
-    text: `Tổng ${aquarium.length} con • Giá trị ~${totalValue.toLocaleString('vi-VN')} xu • Dùng sellfish để bán`,
-  });
+}
+
+// Tóm tắt nhanh bể cá (dùng cho nút "Xem bể cá").
+// LTS v3.1.4: dùng chung modules/core/aquariumView.js với lệnh `aquarium`
+// để hai chỗ không bao giờ hiển thị lệch nhau, và bảng chi tiết thì đã có
+// phân trang nên chỗ này chỉ cần phần tổng hợp theo độ hiếm.
+function summarizeTank(aquarium, opts) {
+  return aqView.summaryEmbed(aquarium, opts || {});
 }
