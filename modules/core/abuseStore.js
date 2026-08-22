@@ -281,6 +281,22 @@ function blankStats() {
     transfersBlocked: 0,
     earningsTrimmed: 0,
     clustersFound: 0,
+    // --- Thêm ở bản LTS ---
+    // LƯU Ý QUAN TRỌNG: hàm bump() chỉ tăng được những khoá có MẶT
+    // trong danh sách này. Mọi khoá mới dùng ở abuseGuard đều phải khai
+    // báo ở đây, nếu không số đếm sẽ âm thầm bị bỏ qua (đã từng bị).
+    captchaTimeout: 0, // hết thời gian trả lời câu hỏi xác minh
+    captchaTooFast: 0, // trả lời nhanh hơn mức người thật làm được
+    captchaError: 0, // lỗi kỹ thuật khi ra câu hỏi (không tính là sai)
+    challengesSkipped: 0, // bỏ qua xác minh vì đang có phiên khác
+    sanctionsRequested: 0, // số lần gọi hệ thống xử lý (warn/mute/ban)
+    sanctionsApplied: 0, // số lần thực sự ra quyết định xử lý
+    botsDetected: 0, // số lần kết luận dùng bot/macro
+    clonesDetected: 0, // số lần kết luận dùng acc clone
+    hubsDetected: 0, // số đầu mối thu xu phát hiện được
+    analysisRuns: 0, // số lần chạy phân tích sâu
+    analysisCacheHits: 0, // số lần dùng lại kết quả cũ (tiết kiệm CPU)
+    trustRestored: 0, // số lần hồi điểm tin cậy sau khi xác minh
   };
 }
 
@@ -502,7 +518,7 @@ function getConfig() {
 
 function setConfig(patch) {
   state.config = sanitizeConfig(Object.assign({}, state.config, patch || {}));
-  // Sửa tay cấu hình thì không còn là preset gốc nứa.
+  // Sửa tay cấu hình thì không còn là preset gốc nữa.
   if (patch && !Object.prototype.hasOwnProperty.call(patch, 'preset')) state.config.preset = 'custom';
   persistNow();
   return getConfig();
@@ -584,7 +600,12 @@ function addLink(a, b, reason, weight, manual = false) {
     return false;
   }
   state.links.push({ a: ia, b: ib, reason: r, weight: w, at: Date.now(), manual: Boolean(manual) });
-  if (state.links.length > MAX_LINKS) state.links = state.links.slice(-MAX_LINKS);
+  if (state.links.length > MAX_LINKS) {
+    state.links = state.links.slice(-MAX_LINKS);
+    rebuildIndex(); // đã cắt bớt -> chỉ mục cũ không còn đúng
+  } else {
+    indexAddLink(ia, ib); // cập nhật chỉ mục tại chỗ (LTS)
+  }
   persistSoon();
   return true;
 }
@@ -595,7 +616,18 @@ function removeLinks(userId) {
   const before = state.links.length;
   state.links = state.links.filter((l) => l.a !== id && l.b !== id);
   const removed = before - state.links.length;
-  if (removed) persistNow();
+  if (removed) {
+    // Xoá luôn khỏi chỉ mục để không còn gợi ý sai (LTS).
+    const set = linkIndex.get(id);
+    if (set) {
+      for (const other of set) {
+        const back = linkIndex.get(other);
+        if (back) back.delete(id);
+      }
+      linkIndex.delete(id);
+    }
+    persistNow();
+  }
   return removed;
 }
 
@@ -682,6 +714,7 @@ function noteTransfer(from, to, amount, blocked = false) {
     edge.total = toCount(edge.total) + Math.max(0, Math.floor(Number(amount) || 0));
   }
   edge.last = now;
+  indexAddTransfer(a, b, edge); // cập nhật chỉ mục tại chỗ (LTS)
   if (Object.keys(state.transfers).length > MAX_TRANSFERS) prune(now, true);
   persistSoon();
   return edge;
@@ -862,9 +895,135 @@ function prune(now = Date.now(), force = false) {
     else delete state.joins[gid];
   }
 
+  // 7) Tham chiếu cụm trên hồ sơ trỏ tới cụm không còn tồn tại (LTS).
+  // Trước đây khi cụm bị xoá ở bước 5 thì u.cluster vẫn giữ ID cũ, làm
+  // hồ sơ đó "được bảo vệ vĩnh viễn" khỏi dọn rác và hiển thị sai cụm.
+  for (const id of Object.keys(state.users)) {
+    const u = state.users[id];
+    if (u.cluster && !state.clusters[u.cluster]) {
+      u.cluster = '';
+      removed++;
+    }
+  }
+
+  // 8) Dựng lại chỉ mục tra cứu nhanh sau khi dọn (LTS).
+  rebuildIndex();
+
   if (removed || force) persistSoon();
   return removed;
 }
+
+// =============================================================
+//  Chỉ mục tra cứu nhanh (chỉ nạp trong RAM, KHÔNG lưu ra đĩa) — LTS
+//
+//  Vấn đề hiệu năng cũ: mỗi lần cần biết "ai liên hệ với ai" hoặc
+//  "ai đã chuyển xu cho ai", mã phải quét TOÀN BỘ mảng links (tới 6.000
+//  phần tử) và toàn bộ bảng transfers (tới 20.000 phần tử) — và việc này
+//  xảy ra trên MỖI LỆNH của MỖI NGƯỜI. Nay ta dựng sẵn chỉ mục Map để
+//  tra cứu O(1).
+// =============================================================
+let linkIndex = new Map(); // userId -> Set<userId>
+let outIndex = new Map(); // from -> Map<to, edge>
+let inIndex = new Map(); // to   -> Map<from, edge>
+
+function indexAddLink(a, b) {
+  if (!linkIndex.has(a)) linkIndex.set(a, new Set());
+  if (!linkIndex.has(b)) linkIndex.set(b, new Set());
+  linkIndex.get(a).add(b);
+  linkIndex.get(b).add(a);
+}
+
+function indexAddTransfer(from, to, edge) {
+  if (!outIndex.has(from)) outIndex.set(from, new Map());
+  outIndex.get(from).set(to, edge);
+  if (!inIndex.has(to)) inIndex.set(to, new Map());
+  inIndex.get(to).set(from, edge);
+}
+
+// Dựng lại toàn bộ chỉ mục từ dữ liệu hiện tại.
+function rebuildIndex() {
+  linkIndex = new Map();
+  outIndex = new Map();
+  inIndex = new Map();
+  for (const l of state.links) {
+    if (l && l.a && l.b) indexAddLink(l.a, l.b);
+  }
+  for (const key of Object.keys(state.transfers)) {
+    const cut = key.indexOf('>');
+    if (cut <= 0) continue;
+    indexAddTransfer(key.slice(0, cut), key.slice(cut + 1), state.transfers[key]);
+  }
+  return { links: linkIndex.size, senders: outIndex.size, receivers: inIndex.size };
+}
+
+/**
+ * Những ai có liên hệ trực tiếp với người này (O(1) thay vì O(tất cả)).
+ * @returns {string[]}
+ */
+function linkedTo(userId) {
+  const id = toId(userId);
+  if (!id) return [];
+  const set = linkIndex.get(id);
+  return set ? Array.from(set) : [];
+}
+
+/**
+ * Láng giềng trong phạm vi `depth` bước (BFS có giới hạn).
+ * Dùng để tìm nhanh cụm của một người mà không phải dựng lại cả đồ thị.
+ */
+function neighbourhood(userId, depth = 2, limit = 120) {
+  const start = toId(userId);
+  if (!start) return [];
+  const seen = new Set([start]);
+  let frontier = [start];
+  const maxDepth = Math.max(1, Math.min(4, Number(depth) || 2));
+  const cap = Math.max(2, Math.min(500, Number(limit) || 120));
+  for (let d = 0; d < maxDepth && frontier.length && seen.size < cap; d++) {
+    const next = [];
+    for (const node of frontier) {
+      const set = linkIndex.get(node);
+      if (!set) continue;
+      for (const other of set) {
+        if (seen.has(other)) continue;
+        seen.add(other);
+        next.push(other);
+        if (seen.size >= cap) break;
+      }
+      if (seen.size >= cap) break;
+    }
+    frontier = next;
+  }
+  seen.delete(start);
+  return Array.from(seen);
+}
+
+// Các cạnh chuyển xu của một người, tra qua chỉ mục (O(bậc) thay vì O(tất cả)).
+function fastEdgesOf(userId) {
+  const id = toId(userId);
+  if (!id) return { sent: [], received: [] };
+  const sent = [];
+  const received = [];
+  const out = outIndex.get(id);
+  if (out) for (const [to, edge] of out) sent.push(Object.assign({ to }, edge));
+  const inc = inIndex.get(id);
+  if (inc) for (const [from, edge] of inc) received.push(Object.assign({ from }, edge));
+  return { sent, received };
+}
+
+// Số người đã dồn xu VỀ người này (để xét vai "đầu mối").
+function inboundSenders(userId, minCount = 1) {
+  const id = toId(userId);
+  if (!id) return 0;
+  const inc = inIndex.get(id);
+  if (!inc) return 0;
+  const floor = Math.max(1, Number(minCount) || 1);
+  let n = 0;
+  for (const edge of inc.values()) if (toCount(edge.count) >= floor) n++;
+  return n;
+}
+
+// Dựng chỉ mục ngay khi nạp module (dữ liệu đã đọc từ đĩa xong).
+rebuildIndex();
 
 module.exports = {
   CONFIG_DEFAULTS,
@@ -903,4 +1062,10 @@ module.exports = {
   clearLog,
   prune,
   flush,
+  // --- Chỉ mục tra cứu nhanh (LTS) ---
+  rebuildIndex,
+  linkedTo,
+  neighbourhood,
+  fastEdgesOf,
+  inboundSenders,
 };
