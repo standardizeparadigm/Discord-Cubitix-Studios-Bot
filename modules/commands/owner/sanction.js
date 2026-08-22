@@ -149,7 +149,7 @@ function overviewEmbed(client) {
         '`' + prefix + 'xuly ban @người <lý do>`\n' +
         '`' + prefix + 'xuly tha @người` — gỡ sạch án\n' +
         '`' + prefix + 'xuly danhsach` · `khangnghi` · `nhatky` · `thongke`\n' +
-        '`' + prefix + 'dashboard` — trung tâm điều khiển đầy đủ',
+        '`' + prefix + 'antiabuse` — trung tâm điều khiển đầy đủ (đã gộp `dashboard`)',
       inline: false,
     },
   );
