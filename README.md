@@ -69,7 +69,7 @@ CubitixStudios/
 3. Bấm đúp `CAI_DAT.bat` để cài thư viện.
 4. Bấm đúp `START_BOT_AN_TERMINAL.vbs` (chạy ẩn) hoặc `START_BOT.bat`.
 
-Gõ `!help` hoặc `/help` trong Discord để xem toàn bộ lệnh.
+Gõ `chelp` trong Discord để xem toàn bộ lệnh.
 
 ---
 
