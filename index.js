@@ -94,6 +94,35 @@ const shutdown = (signal) => {
   if (shuttingDown) return;
   shuttingDown = true;
   logger.warn(`Nhận ${signal} - đang tắt bot...`);
+
+  // --- SỬA LỖI (LTS): ghi hết dữ liệu xuống ổ đĩa trước khi thoát ---
+  // Các kho dữ liệu đều ghi "để dành" sau vài giây cho đỡ nặng ổ đĩa. Trước
+  // đây nếu bot bị tắt đúng lúc đang chờ ghi thì mất tới 8 giây dữ liệu:
+  // án vừa tuyên, cảnh cáo vừa ra, đơn kháng nghị vừa gửi đều có thể bay
+  // mất. Giờ ta ghi ngay và luôn trước khi đóng kết nối.
+  try {
+    require('./modules/core/abuseStore').flush();
+    require('./modules/core/sanctionStore').flush();
+    require('./modules/core/globalSwitch').flush();
+    require('./modules/core/maintenanceStore').flush();
+    logger.success('Đã lưu toàn bộ dữ liệu chống gian lận & xử lý xuống ổ đĩa.');
+  } catch (err) {
+    logger.warn('Không lưu được một số dữ liệu khi tắt: ' + (err?.message || err));
+  }
+
+  // Dừng các đồng hồ nền để không có việc nào chạy giữa lúc đang thoát.
+  try {
+    require('./modules/core/sanctions').stopTicker();
+  } catch {
+    /* chưa nạp thì không có gì phải dừng */
+  }
+  try {
+    if (client.presenceTimer) clearInterval(client.presenceTimer);
+    if (client.pruneTimer) clearInterval(client.pruneTimer);
+  } catch {
+    /* bỏ qua */
+  }
+
   // Hết 5 giây mà chưa xong thì thoát luôn, không để treo tiến trình.
   const hardExit = setTimeout(() => process.exit(0), 5000);
   hardExit.unref?.();
