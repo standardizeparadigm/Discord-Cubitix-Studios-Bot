@@ -122,6 +122,59 @@ module.exports = {
       logger.warn('Không nạp được hệ thống chống gian lận: ' + err.message);
     }
 
+    // --- Hệ thống xử lý (cảnh cáo / cấm tạm / cấm vĩnh viễn) — LTS ---
+    // Bắt buộc phải bật đồng hồ ở đây: nó là thứ duy nhất phát hiện án cấm
+    // tạm VỪA HẾT HẠN để nhắn tin "bạn chơi lại được rồi" cho người chơi.
+    // Không có nó thì người bị cấm tạm phải tự mò thử xem hết hạn chưa.
+    try {
+      const sanctions = require('../core/sanctions');
+      const sstore = require('../core/sanctionStore');
+      sanctions.startTicker(client, 60 * 1000);
+
+      // Dọn hồ sơ quá cũ ngay khi bật, rồi lặp lại mỗi 6 giờ.
+      const pruneAll = () => {
+        try {
+          const a = sstore.prune();
+          const b = require('../core/abuseStore').prune();
+          if (a || b) logger.info(`Dọn dữ liệu cũ: ${a} hồ sơ xử lý, ${b} mục chống gian lận.`);
+        } catch (err) {
+          logger.warn('Không dọn được dữ liệu cũ: ' + (err && err.message ? err.message : err));
+        }
+      };
+      pruneAll();
+      if (client.pruneTimer) clearInterval(client.pruneTimer);
+      client.pruneTimer = setInterval(pruneAll, 6 * 60 * 60 * 1000);
+      client.pruneTimer.unref?.();
+
+      const sst = sanctions.status();
+      logger.info(
+        'Hệ thống xử lý: ' +
+          (sst.on ? 'BẬT' : 'TẮT') +
+          ' | Bộ cấu hình: ' +
+          sst.presetLabel +
+          ' | Đang cấm vĩnh viễn: ' +
+          sst.stats.activeBans +
+          ' | Đang cấm tạm: ' +
+          sst.stats.activeMutes +
+          ' | Đơn kháng nghị chờ: ' +
+          sst.stats.pendingAppeals,
+      );
+      if (sst.stats.pendingAppeals > 0) {
+        logger.warn(
+          'Có ' +
+            sst.stats.pendingAppeals +
+            ' đơn kháng nghị đang chờ bạn xem. Gõ ' +
+            config.prefix +
+            'xuly để mở bảng.',
+        );
+      }
+      if (sst.config.observeOnly) {
+        logger.warn('Hệ thống xử lý đang ở chế độ CHỈ QUAN SÁT — ghi nhận nhưng không thi hành án nào.');
+      }
+    } catch (err) {
+      logger.warn('Không nạp được hệ thống xử lý: ' + (err && err.message ? err.message : err));
+    }
+
     logger.success('Bot đã sẵn sàng! Gõ ' + config.prefix + 'help để bắt đầu.');
   },
 };
