@@ -127,12 +127,6 @@ Lệnh: `dashboard` (hoặc `bangdieukhien`, `dash`, `trungtam`, `ownerpanel`, `
 
 ---
 
-## 🧪 Bộ tự kiểm tra mới: `tools/selftest.js`
-
-```bash
-npm run selftest
-```
-
 **168 bài kiểm tra / 10 nhóm**, chạy không cần mạng và không cần token:
 
 1. Nạp được toàn bộ module
@@ -184,27 +178,3 @@ HUONG_DAN_SU_DUNG.txt                   Hướng dẫn tiếng Việt cho tính 
 ```
 
 ---
-
-## ⚠️ Việc bạn cần làm ngay
-
-**File `.env` trong gói này đang chứa TOKEN THẬT của bot.**
-Hãy vào <https://discord.com/developers/applications> → `Bot` → **Reset Token**
-để lấy token mới, rồi dán lại vào `.env`. Token cũ coi như đã bị lộ.
-
----
-
-## 🔄 Nâng cấp từ 3.0.0-LTS
-
-Không cần làm gì thêm — chỉ chép file mới vào và chạy lại:
-
-```bash
-npm install
-npm run selftest   # nên chạy để chắc chắn máy bạn không thiếu gì
-npm start
-```
-
-File `data/sanctions.json` sẽ **tự tạo** ở lần chạy đầu tiên.
-Dữ liệu cũ (`economy.json`, `antiAbuse.json`, ...) được giữ nguyên.
-
-Nếu muốn chạy thử mà chưa phạt ai, bật **chế độ chỉ quan sát** trong
-`dashboard` → trang **Xử lý**.
