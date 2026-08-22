@@ -7,6 +7,8 @@ const Embed = require('./EmbedFactory');
 const maintenance = require('./maintenanceStore');
 const { colors } = require('./palette');
 const abuseGuard = require('./abuseGuard');
+// Hệ thống xử lý (cảnh cáo / cấm tạm / cấm vĩnh viễn) — LTS.
+const sanctions = require('./sanctions');
 
 // Nhắc "đang bảo trì" tối đa 1 lần / 20 giây cho mỗi người, để một người
 // spam lệnh lúc bảo trì không làm bot gửi hàng loạt tin nhắn (chống rate limit).
@@ -112,15 +114,31 @@ module.exports = async function runCommand(client, command, ctx) {
     return ctx.reply({ embeds: [Embed.error('Không thể dùng', 'Lệnh này chỉ dành cho chủ bot.')] }).catch(() => {});
   }
 
+  // --- ĐANG BỊ CẤM DÙNG BOT? (warn / mute / ban) — LTS ---
+  // Đặt sát đầu vì người đã bị cấm thì không cần chạy thêm bất kỳ bước
+  // nào (nhanh nhất, rẻ nhất). Hàm gate() tự cho qua: chủ bot, lệnh
+  // ownerOnly, và các lệnh trong danh sách cho phép (verify, kháng nghị...).
+  // Nếu không ai bị cấm thì hàm thoát ngay ở bước đầu tiên, gần như
+  // không tốn gì. Mọi lỗi ở đây đều mở cửa cho lệnh chạy (fail-open).
+  try {
+    const sg = sanctions.gate(client, command, ctx);
+    if (sg && sg.allowed === false) {
+      if (sg.payload && !sg.silent) await ctx.reply(sg.payload).catch(() => {});
+      return;
+    }
+  } catch (err) {
+    client.logger?.error?.(`Lỗi kiểm tra hệ thống xử lý: ${err && err.stack ? err.stack : err}`);
+  }
+
   // --- Chỉ dùng trong máy chủ ---
   if (command.guildOnly && !ctx.guild) {
     return ctx.reply({ embeds: [Embed.error('Không thể dùng', 'Lệnh này chỉ dùng được trong máy chủ.')] }).catch(() => {});
   }
 
   // --- Kiểm tra quyền của thành viên ---
-  // LO HONG CU: neu ctx.member la null (cache chua co) thi TOAN BO kiem tra quyen
-  // bi bo qua -> nguoi thuong van chay duoc lenh kick/ban. Nay ta fetch lai member,
-  // va neu van khong lay duoc thi TU CHOI thay vi cho qua.
+  // LỖ HỔNG CŨ: nếu ctx.member là null (cache chưa có) thì TOÀN BỘ kiểm tra
+  // quyền bị bỏ qua -> người thường vẫn chạy được lệnh kick/ban. Nay ta
+  // fetch lại member, và nếu vẫn không lấy được thì TỪ CHỐI thay vì cho qua.
   if (command.permissions && command.permissions.length) {
     let member = ctx.member;
     if (!member && ctx.guild) {
@@ -128,12 +146,19 @@ module.exports = async function runCommand(client, command, ctx) {
     }
     if (!member) {
       return ctx
-        .reply({ embeds: [Embed.error('Khong xac minh duoc quyen', 'Khong doc duoc thong tin thanh vien cua ban nen lenh bi tu choi vi an toan. Hay thu lai.')] })
+        .reply({
+          embeds: [
+            Embed.error(
+              'Không xác minh được quyền',
+              'Không đọc được thông tin thành viên của bạn nên lệnh bị từ chối vì an toàn. Hãy thử lại.',
+            ),
+          ],
+        })
         .catch(() => {});
     }
     const unknown = command.permissions.filter((p) => PermissionsBitField.Flags[p] === undefined);
     if (unknown.length) {
-      client.logger?.warn?.(`Lenh "${command.name}" khai bao quyen khong ton tai: ${unknown.join(', ')}`);
+      client.logger?.warn?.(`Lệnh "${command.name}" khai báo quyền không tồn tại: ${unknown.join(', ')}`);
     }
     const missing = command.permissions.filter(
       (p) => PermissionsBitField.Flags[p] !== undefined && !member.permissions.has(PermissionsBitField.Flags[p]),
@@ -168,7 +193,18 @@ module.exports = async function runCommand(client, command, ctx) {
   let guardTrack = null;
   try {
     const verdict = await abuseGuard.guard(client, command, ctx);
-    if (verdict && !verdict.allowed) return;
+    if (verdict && !verdict.allowed) {
+      // LỖI CŨ (đã sửa ở bản LTS): trước đây khi bị chặn thì hàm return
+      // ngay, KHÔNG ghi mốc cooldown. Kết quả: đúng kẻ dùng macro lại là
+      // người được spam lệnh KHÔNG GIỚI HẠN — mỗi lần bị chặn lại đủ
+      // điều kiện bấm tiếp, làm bot tốn CPU và dễ bị Discord chặn tần số.
+      // Nay vẫn ghi mốc cooldown khi bị chặn để họ không thể hại bot.
+      if (!skipCooldown) {
+        timestamps.set(ctx.author.id, now);
+        setTimeout(() => timestamps.delete(ctx.author.id), cooldownMs).unref?.();
+      }
+      return;
+    }
     guardTrack = (verdict && verdict.track) || null;
   } catch (err) {
     // Không bao giờ để hệ thống chống gian lận làm chết lệnh (fail-open).
