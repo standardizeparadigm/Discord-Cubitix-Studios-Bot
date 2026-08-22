@@ -7,8 +7,6 @@
   "scripts": {
     "start": "node index.js",
     "deploy": "node deploy-commands.js",
-    "selftest": "node tools/selftest.js",
-    "test": "node tools/selftest.js"
   },
   "author": "Cubitix Studios",
   "license": "CC-BY-NC-SA-4.0",
