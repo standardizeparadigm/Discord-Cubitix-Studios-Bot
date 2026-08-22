@@ -607,7 +607,19 @@ async function guard(client, command, ctx) {
     const altOn = isAltOn();
     if (!autoOn && !altOn) return { allowed: true };
     if (!ctx || !ctx.author || ctx.author.bot) return { allowed: true };
-    if (command && (command.ownerOnly || command.bypassAbuseGuard)) return { allowed: true };
+
+    // ---- HỢP ĐỒNG (LTS v3.1.4): CHỈ TÍNH KHI NGƯỜI CHƠI GÕ LỆNH ----
+    // Đường đi của từng loại hành động trong bot này:
+    //   • Gõ lệnh (prefix hoặc gạch chéo) -> runner.js -> guard()  ==> CÓ tính
+    //   • Chat bình thường  -> messageCreate -> noteMessage()  ==> chỉ HẠ điểm nghi
+    //   • Bấm nút/menu khi chơi (câu cá, aquarium, bảng…) -> collector → KHÔNG tính
+    //   • Nút giveaway, nút báo án -> interactionCreate            ==> KHÔNG tính
+    // Đây là lớp phòng vệ thứ hai: nếu sau này có ai lỡ gọi guard() từ tin
+    // nhắn hay từ nút bấm thì cũng không ai bị chấm điểm oan.
+    if (!command || !command.name) return { allowed: true };
+    if (ctx.isComponent === true || ctx.fromComponent === true) return { allowed: true };
+
+    if (command.ownerOnly || command.bypassAbuseGuard) return { allowed: true };
 
     const userId = String(ctx.author.id);
     if (isOwner(client, userId)) return { allowed: true };
@@ -713,6 +725,8 @@ async function guard(client, command, ctx) {
         command: cmdName,
         at: now,
         cooldownMs: Math.max(0, Number(command && command.cooldown) || 0) * 1000,
+        // HỢP ĐỒNG: chỉ nhịp GÕ LỆNH mới được ghi vào bộ máy chống bot/macro.
+        source: 'command',
       });
       rec.autoScore = verdict.score;
       rec.autoFlags = verdict.reasons.slice(0, 10);
@@ -766,6 +780,19 @@ async function guard(client, command, ctx) {
             engine.reset(userId);
             store.touch();
             return { allowed: true, track: buildTrack(rec, cfg, userId, altOn, enforced) };
+          }
+
+          // ---- LTS v3.1.4: HAI TRƯỜNG HỢP KHÔNG PHẢI LÀ TRƯỢT ----
+          //   • 'locked' = câu đố đang tạm khoá vì trước đó sai nhiều lần
+          //   • 'busy'   = người này đang có một câu đố khác chờ trả lời
+          // Cả hai đều KHÔNG phải là "người chơi trả lời sai", nên không
+          // đếm là trượt, không cộng cảnh cáo và không phạt thêm lần nữa
+          // (nếu đếm thì một lần trượt sẽ bị phạt nhiều lần — rất oan).
+          if (res.reason === 'locked' || res.reason === 'busy') {
+            store.bump('challengesSkipped');
+            store.bump('commandsBlocked');
+            store.touch();
+            return { allowed: false };
           }
 
           // Trượt xác minh
@@ -977,6 +1004,11 @@ function after(client, _command, _ctx, track) {
 
 // =============================================================
 //  Ghi nhận tin nhắn thường (dấu hiệu người thật có giao tiếp)
+//
+//  QUAN TRỌNG (LTS v3.1.4): hàm này CHỈ được PHÉP HẠ điểm nghi.
+//  Nó KHÔNG gọi engine.observe(), không tạo hồ sơ mới, không cộng
+//  điểm dùng máy, không phạt và không ra câu đố captcha. Chat nhiều
+//  chỉ có lợi cho người chơi, tuyệt đối không bao giờ có hại.
 // =============================================================
 function noteMessage(client, message) {
   try {
@@ -1209,6 +1241,14 @@ async function selfVerify(client, ctx) {
     store.log('captcha', userId, `Tự xác minh thành công sau ${(res.ms / 1000).toFixed(2)}s`);
     store.touch();
     return { ok: true, ms: res.ms, record: rec };
+  }
+
+  // LTS v3.1.4: đang tạm khoá câu đố hoặc đang có câu đố khác chờ trả
+  // lời thì không phải là trả lời sai -> không đếm vào số lần trượt.
+  if (res.reason === 'locked' || res.reason === 'busy') {
+    store.bump('challengesSkipped');
+    store.touch();
+    return { ok: false, reason: res.reason, ms: res.ms, record: rec };
   }
 
   rec.captchaFailed = (rec.captchaFailed || 0) + 1;
