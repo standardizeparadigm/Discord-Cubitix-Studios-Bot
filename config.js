@@ -26,13 +26,10 @@ module.exports = {
   embedColor: process.env.EMBED_COLOR || '#5865F2',
   footerText: process.env.FOOTER_TEXT || 'Cubitix Studios • All In One Bot',
 
-  // --- Chào mừng & tạm biệt thành viên ---
   welcomeChannelId,
-  // Bỏ trống GOODBYE_CHANNEL_ID thì dùng chung kênh với lời chào mừng.
   goodbyeChannelId: process.env.GOODBYE_CHANNEL_ID || welcomeChannelId,
   welcomeEnabled: bool(process.env.WELCOME_ENABLED, true),
   goodbyeEnabled: bool(process.env.GOODBYE_ENABLED, true),
-  // Đếm xem ai đã mời thành viên mới và tổng số lượt mời của người đó.
   inviteTracking: bool(process.env.INVITE_TRACKING, true),
 
   enableSlash: bool(process.env.ENABLE_SLASH, true),
