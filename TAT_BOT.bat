@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title Cubitix Studios - Tat bot
+title Cubitix Studios - Tắt bot
 echo Đang tắt tất cả tiến trình Node.js (bao gồm bot)...
 taskkill /F /IM node.exe >nul 2>nul
 if errorlevel 1 (
