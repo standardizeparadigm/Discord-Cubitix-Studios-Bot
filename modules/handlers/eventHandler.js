@@ -1,6 +1,3 @@
-// =============================================================
-//  eventHandler - tự động nạp tất cả sự kiện trong modules/events
-// =============================================================
 const fs = require('fs');
 const path = require('path');
 
