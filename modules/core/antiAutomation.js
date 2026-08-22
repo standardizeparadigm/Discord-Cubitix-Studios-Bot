@@ -416,6 +416,18 @@ class AutomationEngine {
     if (!userId) return this._empty();
 
     const at = Number.isFinite(Number(input.at)) ? Number(input.at) : Date.now();
+
+    // ---- HỢP ĐỒNG (LTS v3.1.4): CHỈ NHẬN DỮ LIỆU TỪ VIỆC GÕ LỆNH ----
+    // Bộ máy này chấm điểm "nhịp GÕ LỆNH", nên chỉ được nhận dữ liệu
+    // khi người chơi dùng LỆNH của bot. Tin nhắn chat bình thường và việc
+    // bấm nút khi chơi (nút câu cá, nút bảng, giveaway, minigame…) KHÔNG
+    // được tính là dấu hiệu dùng máy. Gọi từ nguồn khác thì chỉ được XEM
+    // điểm hiện tại, tuyệt đối không ghi thêm mẫu để không ai bị nghi oan.
+    const source = String(input.source == null ? 'command' : input.source);
+    if (source !== 'command') {
+      return this.users.has(userId) ? this.evaluate(userId, at) : this._empty();
+    }
+
     const command = String(input.command == null ? '?' : input.command);
     const st = this._state(userId, at);
     this.prune(at);
