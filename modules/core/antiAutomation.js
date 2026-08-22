@@ -15,9 +15,18 @@
 //   5) endurance  - chơi liên tục hàng giờ không hề có quãng nghỉ của người
 //   6) nosleep    - hoạt động rải đủ 24 giờ, kể cả 2-5 giờ sáng
 //   7) snipe      - bấm lệnh đúng mili-giây sau khi hết thời gian chờ
+//   8) quantize   - khoảng cách luôn là số tròn (3000ms, 5000ms...) [LTS]
+//   9) entropy    - độ ngẫu nhiên của khoảng cách quá thấp [LTS]
+//  10) precision  - độ lệch tuyệt đối quanh trung vị nhỏ tới mức phi lý [LTS]
 //
 //  Điểm 0-100. Ngưỡng: watch -> challenge (bắt xác minh) -> block (khoá tạm).
 //  Có "minSamples" để KHÔNG BAO GIỜ kết luận khi chưa đủ dữ liệu.
+//
+//  Bản LTS còn trả thêm:
+//   - confidence : độ tin cậy của kết luận (0..1), dựa trên lượng dữ liệu và
+//                  số dấu hiệu độc lập cùng chỉ về một hướng. Hệ thống xử lý
+//                  dùng con số này để KHÔNG ra án nặng khi bằng chứng còn mỏng.
+//   - humanScore : điểm "bằng chứng người thật" đã trừ bớt (chat thường, nghỉ...)
 // =============================================================
 'use strict';
 
@@ -69,17 +78,50 @@ const DEFAULTS = {
   snipeRatioWarn: 0.6,
   snipeRatioFull: 0.92,
 
+  // --- 8) Khoảng cách là số tròn (LTS) ---
+  // Macro thường dùng sleep(3000) nên khoảng cách hay chia hết cho 500/1000ms.
+  quantizeMinSamples: 10,
+  quantizeSteps: [1000, 500, 250], // các bậc "tròn" cần kiểm tra
+  quantizeTolerancePct: 0.02, // sai số 2% vẫn coi là tròn (trễ mạng)
+  quantizeRatioWarn: 0.45,
+  quantizeRatioFull: 0.85,
+
+  // --- 9) Độ ngẫu nhiên của khoảng cách (LTS) ---
+  entropyMinSamples: 14,
+  entropyBucketMs: 400, // gom khoảng cách theo bậc 400ms rồi tính entropy
+  entropyLow: 0.25, // entropy <= 0.25 -> gần như chỉ có một giá trị
+  entropyHigh: 0.7, // entropy >= 0.70 -> lộn xộn như người thật
+
+  // --- 10) Độ lệch tuyệt đối quanh trung vị (LTS) ---
+  // MAD (median absolute deviation) bền hơn CV khi có vài giá trị lạc.
+  precisionMinSamples: 12,
+  precisionMadStrict: 0.05, // MAD/trung vị <= 5%  -> chính xác phi lý
+  precisionMadLoose: 0.22, // MAD/trung vị >= 22% -> bình thường
+
+  // --- Bằng chứng người thật (LTS) ---
+  humanHintDecayMs: 30 * 60 * 1000, // dấu hiệu người thật có giá trị trong 30 phút
+  humanHintMaxRelief: 0.35, // giảm tối đa 35% điểm cuối
+  humanHintFullAt: 6, // đủ 6 dấu hiệu là được giảm tối đa
+
   // --- Chấm điểm ---
   weights: {
-    rhythm: 22,
-    speed: 16,
-    cadence: 14,
-    repetition: 13,
-    endurance: 12,
-    nosleep: 10,
-    snipe: 13,
+    rhythm: 20,
+    speed: 15,
+    cadence: 13,
+    repetition: 12,
+    endurance: 10,
+    nosleep: 9,
+    snipe: 12,
+    quantize: 12,
+    entropy: 10,
+    precision: 10,
   },
   thresholds: { watch: 40, challenge: 62, block: 82 },
+
+  // --- Độ tin cậy (LTS) ---
+  confidenceFullSamples: 45, // đủ 45 lệnh -> dữ liệu coi như đầy đặn
+  confidenceMinSignals: 2, // cần >= 2 dấu hiệu độc lập mới đáng tin
+  confidenceFullSignals: 4,
 };
 
 // Tên tiếng Việt của từng dấu hiệu (dùng để hiển thị cho người chơi/chủ bot).
@@ -91,6 +133,10 @@ const SIGNAL_LABELS = {
   endurance: 'chơi liên tục nhiều giờ không nghỉ',
   nosleep: 'hoạt động rải đủ 24 giờ, kể cả đêm khuya',
   snipe: 'bấm lệnh đúng mili-giây sau khi hết thời gian chờ',
+  // --- Ba dấu hiệu mới ở bản LTS ---
+  quantize: 'khoảng nghỉ luôn là số tròn (1s / 0,5s / 0,25s) như sleep() trong code',
+  entropy: 'nhịp gõ gần như không có biến thiên tự nhiên',
+  precision: 'độ sai lệch giữa các lần gõ nhỏ tới mức chỉ máy mới làm được',
 };
 
 // =============================================================
@@ -225,12 +271,60 @@ function cadenceRatio(gaps, bucketMs) {
 }
 
 // Giờ trong ngày theo múi giờ đã cấu hình.
+// LƯU Ý (lỗi đã sửa ở bản LTS): với mốc thời gian âm, phép % trong JS trả số âm
+// nên `hours[-3]` sẽ tạo thuộc tính lạ trên mảng và làm sai chỉ số "không ngủ".
+// Dùng ((x % 24) + 24) % 24 để luôn ra 0..23.
 function hourOf(timestamp, offsetMinutes) {
   const t = Number(timestamp);
   if (!Number.isFinite(t)) return 0;
   const off = Number(offsetMinutes);
   const shifted = t + (Number.isFinite(off) ? off : 0) * 60 * 1000;
-  return Math.floor(shifted / 3600000) % 24;
+  const h = Math.floor(shifted / 3600000);
+  return ((h % 24) + 24) % 24;
+}
+
+// Trung vị của độ lệch tuyệt đối quanh trung vị (MAD) — bền với giá trị lạc.
+// Trả về tỉ lệ MAD / trung vị để so sánh được giữa các nhịp nhanh/chậm.
+function madRatio(values) {
+  const list = toFiniteArray(values).filter((v) => v > 0);
+  if (list.length < 3) return 1;
+  const med = median(list);
+  if (med <= 0) return 1;
+  const devs = list.map((v) => Math.abs(v - med));
+  return median(devs) / med;
+}
+
+/**
+ * Tỉ lệ khoảng cách là "số tròn" theo một trong các bậc cho trước.
+ * Macro dùng sleep(3000) nên gần như 100% khoảng cách chia hết cho 1000ms,
+ * còn người thật thì gần như không bao giờ.
+ *
+ * @param {number[]} gaps
+ * @param {number[]} steps các bậc cần thử, ví dụ [1000, 500, 250]
+ * @param {number} tolerancePct sai số cho phép (0.02 = 2%)
+ * @returns {{ratio:number, step:number, count:number, total:number}}
+ */
+function quantizeRatio(gaps, steps, tolerancePct) {
+  const list = toFiniteArray(gaps).filter((g) => g > 0);
+  const stepList = Array.isArray(steps) && steps.length ? steps : [1000];
+  if (list.length < 3) return { ratio: 0, step: 0, count: 0, total: list.length };
+  const tol = Number.isFinite(Number(tolerancePct)) ? Math.max(0, Number(tolerancePct)) : 0.02;
+
+  let best = { ratio: 0, step: 0, count: 0, total: list.length };
+  for (const rawStep of stepList) {
+    const step = Math.max(1, Math.floor(Number(rawStep) || 0));
+    let hits = 0;
+    for (const g of list) {
+      const rem = g % step;
+      const dist = Math.min(rem, step - rem);
+      // Sai số cho phép: theo % của khoảng cách, nhưng không quá nửa bậc.
+      const allow = Math.min(step / 2, Math.max(25, g * tol));
+      if (dist <= allow) hits++;
+    }
+    const ratio = hits / list.length;
+    if (ratio > best.ratio) best = { ratio, step, count: hits, total: list.length };
+  }
+  return best;
 }
 
 // =============================================================
@@ -270,6 +364,13 @@ class AutomationEngine {
         snipeHits: 0,
         snipeTotal: 0,
         lastSeen: now,
+        // --- LTS ---
+        humanHits: 0, // số bằng chứng "người thật" còn hiệu lực
+        humanAt: 0, // mốc bằng chứng người thật gần nhất
+        breaks: 0, // số lần nghỉ giữa phiên (người thật hay nghỉ)
+        scoreCache: null, // bộ đệm kết quả chấm điểm
+        scoreCacheAt: 0,
+        version: 0, // tăng mỗi lần có dữ liệu mới -> làm hỏng bộ đệm
       };
       this.users.set(userId, st);
     }
@@ -325,7 +426,10 @@ class AutomationEngine {
       const gap = at - prevAt;
       // Bỏ qua khoảng cách âm (đồng hồ nhảy) và khoảng cách quá dài (đã nghỉ).
       if (gap > 0 && gap <= cfg.breakMs) st.gaps.push(gap);
-      if (gap > cfg.breakMs || gap < 0) st.sessionStart = at; // đã nghỉ -> phiên mới
+      if (gap > cfg.breakMs || gap < 0) {
+        st.sessionStart = at; // đã nghỉ -> phiên mới
+        st.breaks = (st.breaks || 0) + 1; // nghỉ là dấu hiệu người thật
+      }
     } else {
       st.sessionStart = at;
     }
@@ -355,14 +459,31 @@ class AutomationEngine {
       }
       st.perCmd.set(command, at);
       // Không để Map lệnh phình vô hạn.
+      // (Lỗi đã sửa ở bản LTS): trước đây xóa theo THỨ TỰ THÊM VÀO nên có
+      // thể xóa mất lệnh đang dùng liên tục và giữ lại lệnh đã lâu không dùng,
+      // làm mất dấu hiệu "bấm sát cooldown". Nay xóa theo mục CŨ NHẤT.
       if (st.perCmd.size > 120) {
-        const firstKey = st.perCmd.keys().next().value;
-        st.perCmd.delete(firstKey);
+        let oldestKey = null;
+        let oldestAt = Infinity;
+        for (const [k, v] of st.perCmd) {
+          if (v < oldestAt) {
+            oldestAt = v;
+            oldestKey = k;
+          }
+        }
+        if (oldestKey !== null) st.perCmd.delete(oldestKey);
       }
     }
 
     // Bằng chứng người thật làm giãn dữ liệu nghi vấn (giảm oan sai).
-    if (input.humanHint) {
+    // input.humanHint có thể là true/false hoặc một con số "cường độ".
+    const hint = Number(input.humanHint);
+    const hintWeight = input.humanHint === true ? 1 : Number.isFinite(hint) ? Math.max(0, Math.min(5, hint)) : 0;
+    if (hintWeight > 0) {
+      // Dấu hiệu cũ sẽ phai dần theo thời gian.
+      if (st.humanAt > 0 && at - st.humanAt > cfg.humanHintDecayMs) st.humanHits = 0;
+      st.humanHits = Math.min(cfg.humanHintFullAt * 2, (st.humanHits || 0) + hintWeight);
+      st.humanAt = at;
       st.snipeHits = Math.max(0, st.snipeHits - 1);
     }
 
@@ -371,7 +492,29 @@ class AutomationEngine {
     if (st.cmds.length > cfg.historySize) st.cmds.splice(0, st.cmds.length - cfg.historySize);
     if (st.gaps.length > cfg.historySize) st.gaps.splice(0, st.gaps.length - cfg.historySize);
 
+    st.version = (st.version || 0) + 1;
     return this._score(st, at);
+  }
+
+  /**
+   * Ghi nhận bằng chứng "người thật" mà không phải là một lần dùng lệnh.
+   * Ví dụ: người đó gõ chat bình thường, trả lời tin nhắn, đổi biệt danh...
+   * Macro gần như không bao giờ làm những việc này.
+   */
+  noteHuman(userId, weight = 1, at = Date.now()) {
+    const key = String(userId == null ? '' : userId);
+    if (!key) return false;
+    const st = this.users.get(key);
+    if (!st) return false;
+    const cfg = this.cfg;
+    const w = Math.max(0, Math.min(5, Number(weight) || 0));
+    if (w <= 0) return false;
+    if (st.humanAt > 0 && at - st.humanAt > cfg.humanHintDecayMs) st.humanHits = 0;
+    st.humanHits = Math.min(cfg.humanHintFullAt * 2, (st.humanHits || 0) + w);
+    st.humanAt = at;
+    st.lastSeen = Math.max(st.lastSeen || 0, at);
+    st.version = (st.version || 0) + 1;
+    return true;
   }
 
   // Chấm điểm hiện tại mà KHÔNG ghi nhận thêm dữ liệu.
@@ -389,6 +532,11 @@ class AutomationEngine {
       labels: [],
       samples: 0,
       enoughData: false,
+      // Giữ cả hai tên cho tương thích ngược với mã cũ.
+      enough: false,
+      confidence: 0,
+      humanScore: 0,
+      parts: {},
       detail: {},
     };
   }
@@ -474,22 +622,89 @@ class AutomationEngine {
       parts.snipe = 0;
     }
 
+    // ---- 8) Khoảng cách luôn là số tròn (LTS) ----
+    // Đây là dấu hiệu rất mạnh: sleep(3000) trong macro tạo ra khoảng cách
+    // chia hết cho 1000ms, còn người thật thì gần như không bao giờ.
+    if (gaps.length >= cfg.quantizeMinSamples) {
+      const q = quantizeRatio(gaps, cfg.quantizeSteps, cfg.quantizeTolerancePct);
+      detail.quantizeRatio = Number(q.ratio.toFixed(3));
+      detail.quantizeStepMs = q.step;
+      parts.quantize = ramp(q.ratio, cfg.quantizeRatioWarn, cfg.quantizeRatioFull);
+    } else {
+      parts.quantize = 0;
+    }
+
+    // ---- 9) Độ ngẫu nhiên của khoảng cách (LTS) ----
+    // Người thật tạo ra nhiều khoảng cách khác nhau -> entropy cao.
+    if (gaps.length >= cfg.entropyMinSamples) {
+      const bucket = Math.max(1, Number(cfg.entropyBucketMs) || 400);
+      const buckets = gaps.map((g) => String(Math.round(g / bucket)));
+      const ent = normalizedEntropy(buckets);
+      detail.gapEntropy = Number(ent.toFixed(3));
+      // Đảo chiều: entropy thấp -> nghi cao.
+      parts.entropy = 1 - ramp(ent, cfg.entropyLow, cfg.entropyHigh);
+    } else {
+      parts.entropy = 0;
+    }
+
+    // ---- 10) Độ chính xác quanh trung vị (LTS) ----
+    // MAD bền hơn CV: người chơi thật thỉnh thoảng nghỉ vài giây làm CV cao
+    // giả, nhưng MAD vẫn phản ánh đúng "phần lớn các lần bấm".
+    if (gaps.length >= cfg.precisionMinSamples) {
+      const mad = madRatio(gaps);
+      detail.madRatio = Number(mad.toFixed(4));
+      parts.precision = 1 - ramp(mad, cfg.precisionMadStrict, cfg.precisionMadLoose);
+    } else {
+      parts.precision = 0;
+    }
+
     // ---- Tổng hợp ----
     const weights = cfg.weights;
     let total = 0;
     let maxTotal = 0;
     const reasons = [];
+    let strongSignals = 0;
     for (const key of Object.keys(weights)) {
       const w = Number(weights[key]) || 0;
       const p = Math.max(0, Math.min(1, Number(parts[key]) || 0));
+      parts[key] = p;
       total += w * p;
       maxTotal += w;
-      if (p >= 0.5) reasons.push(key);
+      if (p >= 0.5) {
+        reasons.push(key);
+        strongSignals++;
+      }
     }
     const enoughData = samples >= cfg.minSamples;
-    const raw = maxTotal > 0 ? (total / maxTotal) * 100 : 0;
+    let raw = maxTotal > 0 ? (total / maxTotal) * 100 : 0;
+
+    // --- Bằng chứng người thật: giảm điểm để tránh oan sai (LTS) ---
+    let humanScore = 0;
+    if (st.humanAt > 0 && now - st.humanAt <= cfg.humanHintDecayMs) {
+      humanScore = Math.min(1, (st.humanHits || 0) / Math.max(1, cfg.humanHintFullAt));
+    }
+    // Nghỉ giữa phiên cũng là bằng chứng người thật (macro không nghỉ).
+    if (samples >= cfg.minSamples && (st.breaks || 0) >= 3) {
+      humanScore = Math.max(humanScore, Math.min(0.5, (st.breaks || 0) / 12));
+    }
+    detail.humanScore = Number(humanScore.toFixed(3));
+    detail.humanHits = st.humanHits || 0;
+    detail.breaks = st.breaks || 0;
+    if (humanScore > 0) raw = raw * (1 - humanScore * cfg.humanHintMaxRelief);
+
     // Chưa đủ dữ liệu thì điểm chỉ mang tính tham khảo, không dùng để trừng phạt.
     const score = enoughData ? Math.round(raw) : Math.round(raw * 0.4);
+
+    // --- Độ tin cậy của kết luận (LTS) ---
+    // Kết hợp 2 yếu tố: đủ dữ liệu chưa, và có bao nhiêu dấu hiệu độc lập
+    // cùng chỉ về một hướng. Một dấu hiệu đơn lẻ thì rất dễ oan.
+    const dataConf = ramp(samples, cfg.minSamples, cfg.confidenceFullSamples);
+    const signalConf = ramp(strongSignals, cfg.confidenceMinSignals, cfg.confidenceFullSignals);
+    let confidence = enoughData ? Math.sqrt(Math.max(0.02, dataConf) * Math.max(0.02, signalConf)) : dataConf * 0.3;
+    // Có bằng chứng người thật thì bớt tự tin đi.
+    confidence = Math.max(0, Math.min(1, confidence * (1 - humanScore * 0.3)));
+    detail.strongSignals = strongSignals;
+    detail.confidence = Number(confidence.toFixed(3));
 
     // Sắp xếp lý do theo mức độ đóng góp giảm dần cho dễ đọc.
     reasons.sort((a, b) => (Number(weights[b]) || 0) * (parts[b] || 0) - (Number(weights[a]) || 0) * (parts[a] || 0));
@@ -508,6 +723,12 @@ class AutomationEngine {
       labels: reasons.map((r) => SIGNAL_LABELS[r] || r),
       samples,
       enoughData,
+      // Giữ cả hai tên cho tương thích ngược với mã cũ và bảng điều khiển.
+      enough: enoughData,
+      confidence,
+      confidencePercent: Math.round(confidence * 100),
+      humanScore,
+      strongSignals,
       parts,
       detail,
     };
@@ -529,4 +750,7 @@ module.exports = {
   detectCycle,
   cadenceRatio,
   hourOf,
+  // --- LTS ---
+  madRatio,
+  quantizeRatio,
 };
