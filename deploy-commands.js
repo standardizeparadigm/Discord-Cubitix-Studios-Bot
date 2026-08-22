@@ -7,7 +7,6 @@ const { REST, Routes, Collection } = require('discord.js');
 const config = require('./config');
 const logger = require('./modules/core/logger');
 
-// Tạo một client giả lập tối thiểu để tái sử dụng commandHandler
 const fakeClient = {
   config,
   logger,
