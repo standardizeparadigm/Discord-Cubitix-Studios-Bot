@@ -9,8 +9,8 @@
 //    checkTransfer() -> gọi trong lệnh give trước khi chuyển xu
 //    noteTransfer()  -> gọi trong lệnh give sau khi chuyển xu thành công
 //
-//  Nguyên tắc an toàn: MọI lỗi ở đây đều "mở của" (cho lệnh chạy).
-//  Thà bỏ sót một kẻ gian lận chỉ còn hơn làm cả bot ngừng hoạt động.
+//  Nguyên tắc an toàn: Mọi lỗi ở đây đều "mở cửa" (cho lệnh chạy).
+//  Thà bỏ sót một kẻ gian lận còn hơn làm cả bot ngừng hoạt động.
 //
 //  Công tắc bật/tắt là TOÀN CỤC (globalSwitch): chủ bot tắt ở đâu thì
 //  mọi máy chủ tắt theo, bật lại cũng vậy. Mặc định: BẬT.
@@ -25,6 +25,9 @@ const auto = require('./antiAutomation');
 const alt = require('./antiAlt');
 const captcha = require('./captcha');
 const db = require('./Database');
+// Hệ thống đánh giá & xử lý (cảnh cáo / cấm tạm / cấm vĩnh viễn) — LTS.
+// sanctions.js KHÔNG require ngược file này nên không có vòng lặp phụ thuộc.
+const sanctions = require('./sanctions');
 
 // ---------- Khoá công tắc ----------
 const SWITCH_AUTOMATION = 'antiAutomation';
@@ -67,7 +70,11 @@ gs.onChange((e) => {
 });
 
 // ---------- Bộ nhớ tạm ----------
-const activeCaptcha = new Set(); // ai đang giải câu đố (tránh hiện 2 câu cùng lúc)
+// activeCaptcha lưu MỐC bắt đầu thay vì chỉ lưu ID (LTS).
+// LỖI CŨ: nếu tiến trình ra câu đố bị kẹt (mạng đứt, Discord lỗi) thì ID
+// nằm lại trong Set mãi mãi, khiến người đó BỊ CHẶN VĨNH VIỄN vì nhánh
+// "đang có câu đố chờ" luôn trả về không cho chạy. Nay có thời hạn tự hết.
+const activeCaptcha = new Map(); // userId -> mốc bắt đầu giải câu đố
 const noticeAt = new Map(); // giới hạn tần suất nhắc nhở
 const analyzedAt = new Map(); // lần cuối chấm điểm rủi ro
 const msgCountedAt = new Map(); // giới hạn đếm tin nhắn
@@ -79,12 +86,14 @@ const MSG_COUNT_MS = 8000;
 const ALERT_MS = 10 * 60 * 1000;
 const GRACE_MS = 25 * 60 * 1000; // vừa xác minh xong thì được yên 25 phút
 const MAX_CANDIDATES = 60; // số tài khoản tối đa để so sánh (giữ bot luôn nhanh)
+const CAPTCHA_STUCK_MS = 3 * 60 * 1000; // quá 3 phút coi như phiên câu đố đã chết
+const MAX_TRACK_KEYS = 4000; // trần cho mọi Map đếm thời gian
 
 let lastClusterBuild = 0;
 
 function throttle(map, key, ms) {
   const now = Date.now();
-  if (map.size > 2000) {
+  if (map.size > MAX_TRACK_KEYS) {
     for (const [k, at] of map) if (now - at > ms * 4) map.delete(k);
   }
   const last = map.get(key) || 0;
@@ -92,6 +101,54 @@ function throttle(map, key, ms) {
   map.set(key, now);
   return true;
 }
+
+// Dọn các Map theo dõi để không rò rỉ bộ nhớ khi bot chạy nhiều tháng (LTS).
+// LỖI CŨ: riêng `analyzedAt` không bao giờ được dọn vì nó không đi qua
+// throttle(), nên mỗi người từng dùng bot đều để lại một mục vĩnh viễn.
+function sweepMaps(now = Date.now()) {
+  let removed = 0;
+  const sweep = (map, ttl) => {
+    if (map.size <= 200) return;
+    for (const [k, at] of map) {
+      if (now - at > ttl) {
+        map.delete(k);
+        removed++;
+      }
+    }
+  };
+  sweep(analyzedAt, ANALYZE_MS * 6);
+  sweep(noticeAt, NOTICE_MS * 20);
+  sweep(msgCountedAt, MSG_COUNT_MS * 40);
+  sweep(alertAt, ALERT_MS * 6);
+  // Phiên câu đố bị kẹt -> giải thoát cho người chơi.
+  for (const [k, at] of activeCaptcha) {
+    if (now - at > CAPTCHA_STUCK_MS) {
+      activeCaptcha.delete(k);
+      removed++;
+    }
+  }
+  // Chặn trên tuyệt đối: nếu vẫn quá lớn thì cắt bớt mục cũ nhất.
+  const hardCap = (map) => {
+    if (map.size <= MAX_TRACK_KEYS) return;
+    const entries = Array.from(map.entries()).sort((a, b) => a[1] - b[1]);
+    for (const [k] of entries.slice(0, map.size - MAX_TRACK_KEYS)) map.delete(k);
+  };
+  hardCap(analyzedAt);
+  hardCap(noticeAt);
+  hardCap(msgCountedAt);
+  hardCap(alertAt);
+  return removed;
+}
+
+// Chạy dọn định kỳ (nhẹ, không giữ tiến trình Node sống).
+const sweepTimer = setInterval(() => {
+  try {
+    sweepMaps(Date.now());
+  } catch {
+    /* dọn rác lỗi thì bỏ qua, không được làm chết bot */
+  }
+}, 5 * 60 * 1000);
+if (sweepTimer && typeof sweepTimer.unref === 'function') sweepTimer.unref();
 
 // ---------- Tiện ích ----------
 function clamp(v, lo, hi) {
@@ -221,10 +278,7 @@ function candidateIds(userId, rec, users) {
   }
 
   // 2) Những người đã có liên kết sẵn.
-  for (const l of store.links()) {
-    if (l.a === userId) out.add(l.b);
-    else if (l.b === userId) out.add(l.a);
-  }
+  for (const id of store.linkedTo(userId)) out.add(id);
 
   // 3) Người trong cùng cụm.
   if (rec.cluster) {
@@ -395,6 +449,9 @@ function analyzeUser(client, userId, now = Date.now(), extra = {}) {
   // ---- Báo cho chủ bot khi có tài khoản bị nâng mức ----
   if (tier !== before && (tier === 'quarantine' || tier === 'freeze')) {
     store.bump('altsFlagged');
+    // Chỉ gọi hệ thống xử lý khi MỨC TĂNG LÊN, không gọi mỗi lần chấm
+    // lại — tránh phạt nhiều lần cho cùng một lỗi (LTS).
+    askSanctionClone(client, id, rec, Object.assign({}, verdict, { risk, tier }), 'alt-tier-up');
     store.log('alt', id, `Mức ${tier} (rủi ro ${risk}): ${verdict.labels.slice(0, 3).join('; ')}`);
     if (client && throttle(alertAt, 'alt:' + id, ALERT_MS)) {
       const clusterInfo = rec.cluster ? `\nCụm liên quan: \`${rec.cluster}\`` : '';
@@ -409,7 +466,16 @@ function analyzeUser(client, userId, now = Date.now(), extra = {}) {
   }
 
   analyzedAt.set(id, now);
-  return { risk, tier, flags: rec.riskFlags, labels: verdict.labels, parts: verdict.parts };
+  store.bump('analysisRuns');
+  return {
+    risk,
+    tier,
+    flags: rec.riskFlags,
+    labels: verdict.labels,
+    parts: verdict.parts,
+    confidence: verdict.confidence,
+    confidencePercent: verdict.confidencePercent,
+  };
 }
 
 // Chấm lại rủi ro nhưng không quá dày để bot luôn nhẹ.
@@ -418,7 +484,10 @@ function maybeAnalyze(client, userId, now, extra) {
   const last = analyzedAt.get(id) || 0;
   const rec = store.peek(id);
   const stale = now - last > ANALYZE_MS;
-  if (!stale && rec) return { risk: rec.risk, tier: rec.riskTier, flags: rec.riskFlags, labels: [] };
+  if (!stale && rec) {
+    store.bump('analysisCacheHits');
+    return { risk: rec.risk, tier: rec.riskTier, flags: rec.riskFlags, labels: [] };
+  }
   return analyzeUser(client, id, now, extra || {});
 }
 
@@ -657,11 +726,17 @@ async function guard(client, command, ctx) {
       } else if (needAction && (enforced || verdict.verdict === 'block') && !inGrace) {
         const reasonText = verdict.labels.slice(0, 3).join('; ') || 'nhịp gõ lệnh bất thường';
 
-        // Đã có câu đố đang chờ -> chể chặn, không hiện thêm câu nữa.
-        if (activeCaptcha.has(userId)) return { allowed: false };
+        // Đã có câu đố đang chờ -> chỉ chặn, không hiện thêm câu nữa.
+        // Phiên quá cũ (bị kẹt) thì bỏ đi để không chặn oan vĩnh viễn (LTS).
+        const capStarted = activeCaptcha.get(userId) || 0;
+        if (capStarted && now - capStarted < CAPTCHA_STUCK_MS) {
+          store.bump('challengesSkipped');
+          return { allowed: false };
+        }
+        if (capStarted) activeCaptcha.delete(userId);
 
         if (cfg.captchaEnabled) {
-          activeCaptcha.add(userId);
+          activeCaptcha.set(userId, now);
           rec.captchaIssued = (rec.captchaIssued || 0) + 1;
           rec.captchaLastAt = now;
           store.bump('captchaIssued');
@@ -696,6 +771,11 @@ async function guard(client, command, ctx) {
           // Trượt xác minh
           rec.captchaFailed = (rec.captchaFailed || 0) + 1;
           store.bump('captchaFailed');
+          // Đếm riêng từng kiểu trượt để chủ bot biết hệ thống đang bắt đúng
+          // hay đang oan (tính năng thống kê mới ở bản LTS).
+          if (res.reason === 'timeout') store.bump('captchaTimeout');
+          else if (res.reason === 'too_fast') store.bump('captchaTooFast');
+          else if (res.reason === 'error') store.bump('captchaError');
           if (res.reason !== 'error') {
             const why =
               res.reason === 'too_fast'
@@ -714,6 +794,9 @@ async function guard(client, command, ctx) {
                 }\n**Cảnh cáo:** ${rec.autoStrikes} — đang khoá ${fmtDuration(pen.ms || 0)}`,
               );
             }
+            // ---- Chuyển bằng chứng cho hệ thống xử lý (LTS) ----
+            // Đây là nơi quyết định cảnh cáo / cấm tạm / cấm vĩnh viễn.
+            askSanction(client, ctx, userId, rec, verdict, res.reason, 'captcha-fail');
           }
           store.bump('commandsBlocked');
           store.touch();
@@ -724,6 +807,7 @@ async function guard(client, command, ctx) {
         const pen = applyPenalty(rec, cfg, `Dấu hiệu dùng máy tự động: ${reasonText}`, now);
         store.log('automation', userId, `Điểm nghi ${verdict.score}: ${reasonText}`);
         store.bump('commandsBlocked');
+        askSanction(client, ctx, userId, rec, verdict, '', 'no-captcha');
         if (throttle(noticeAt, 'auto:' + userId, NOTICE_MS)) {
           const emb = Embed.custom(
             colors.error,
@@ -759,15 +843,135 @@ function buildTrack(rec, cfg, userId, altOn, enforced) {
 }
 
 // =============================================================
-//  Gọi sau khi lệnh chạy xong: ghi số xu vừa kiếm được vào sổ của cụm
+//  NỐI VỚI HỆ THỐNG XỬ LÝ (warn / mute / ban) — LTS
+//
+//  Hai hệ thống phát hiện chỉ làm một việc: THU THẬP BẰNG CHỨNG.
+//  Việc "nặng hay nhẹ, xử thế nào" giao hết cho sanctionEngine để logic
+//  phán quyết nằm ở MỘT chỗ duy nhất, dễ kiểm tra và dễ sửa.
 // =============================================================
-function after(client, command, ctx, track) {
+
+// Gói bằng chứng "dùng máy tự động" của một người.
+function automationEvidence(userId, rec, verdict) {
+  const v = verdict || {};
+  return {
+    macroScore: Number(v.score) || 0,
+    macroConfidence: Number(v.confidence) || 0,
+    macroSamples: Number(v.samples) || 0,
+    macroSignals: Number(v.strongSignals) || 0,
+    macroLabels: Array.isArray(v.labels) ? v.labels.slice(0, 6) : [],
+    captchaFails: Number(rec && rec.captchaFailed) || 0,
+    captchaPasses: Number(rec && rec.captchaPassed) || 0,
+    trust: Number(rec && rec.trust),
+    strikes: Number(rec && rec.autoStrikes) || 0,
+    penaltyLevel: Number(rec && rec.penaltyLevel) || 0,
+    commandCount: Number(rec && rec.cmdCount) || 0,
+    messageCount: Number(rec && rec.msgCount) || 0,
+  };
+}
+
+// Gói bằng chứng "acc clone" của một người.
+function cloneEvidence(userId, rec, verdict) {
+  const v = verdict || {};
+  const cluster = rec && rec.cluster ? store.getCluster(rec.cluster) : null;
+  let hubSenders = 0;
+  try {
+    hubSenders = store.inboundSenders(userId, 2);
+  } catch {
+    hubSenders = 0;
+  }
+  return {
+    cloneRisk: Number(v.risk != null ? v.risk : rec && rec.risk) || 0,
+    cloneConfidence: Number(v.confidence) || 0,
+    cloneTier: String((v.tier || (rec && rec.riskTier) || 'ok')),
+    cloneFlags: Array.isArray(v.flags) ? v.flags.slice(0, 12) : (rec && rec.riskFlags) || [],
+    cloneLabels: Array.isArray(v.labels) ? v.labels.slice(0, 6) : [],
+    clusterSize: cluster && Array.isArray(cluster.members) ? cluster.members.length : 0,
+    hubSenders,
+    accountAgeDays: rec && rec.bornAt ? Math.max(0, (Date.now() - rec.bornAt) / alt.DAY_MS) : null,
+    defaultAvatar: Boolean(rec && rec.noAvatar),
+    messageCount: Number(rec && rec.msgCount) || 0,
+    commandCount: Number(rec && rec.cmdCount) || 0,
+  };
+}
+
+// Gọi hệ thống xử lý cho trường hợp dùng máy tự động.
+// KHÔNG await: quyết định kỷ luật không được làm người chơi chờ thêm.
+function askSanction(client, ctx, userId, rec, verdict, captchaReason, source) {
+  try {
+    store.bump('sanctionsRequested');
+    store.bump('botsDetected');
+    const ev = automationEvidence(userId, rec, verdict);
+    if (captchaReason === 'too_fast') ev.captchaTooFast = true;
+    if (captchaReason === 'timeout') ev.captchaTimeout = true;
+    const p = sanctions.consider(client, {
+      userId,
+      userName: (ctx && ctx.author && ctx.author.username) || (rec && rec.name) || '',
+      evidence: ev,
+      reason: 'Dấu hiệu dùng bot/macro đánh lệnh tự động',
+      source: source || 'antiAutomation',
+    });
+    if (p && typeof p.then === 'function') {
+      p.then((out) => {
+        if (out && out.applied) store.bump('sanctionsApplied');
+      }).catch((err) => {
+        if (client && client.logger && client.logger.error) {
+          client.logger.error('Lỗi hệ thống xử lý (macro): ' + (err && err.message ? err.message : err));
+        }
+      });
+    }
+  } catch (err) {
+    if (client && client.logger && client.logger.error) {
+      client.logger.error('Lỗi gọi hệ thống xử lý (macro): ' + (err && err.message ? err.message : err));
+    }
+  }
+}
+
+// Gọi hệ thống xử lý cho trường hợp acc clone.
+function askSanctionClone(client, userId, rec, verdict, source) {
+  try {
+    store.bump('sanctionsRequested');
+    store.bump('clonesDetected');
+    const ev = cloneEvidence(userId, rec, verdict);
+    if (ev.hubSenders >= 3) store.bump('hubsDetected');
+    const p = sanctions.consider(client, {
+      userId,
+      userName: (rec && rec.name) || '',
+      evidence: ev,
+      reason: 'Dấu hiệu dùng tài khoản phụ (clone) để cày xu',
+      source: source || 'antiAlt',
+    });
+    if (p && typeof p.then === 'function') {
+      p.then((out) => {
+        if (out && out.applied) store.bump('sanctionsApplied');
+      }).catch((err) => {
+        if (client && client.logger && client.logger.error) {
+          client.logger.error('Lỗi hệ thống xử lý (clone): ' + (err && err.message ? err.message : err));
+        }
+      });
+    }
+  } catch (err) {
+    if (client && client.logger && client.logger.error) {
+      client.logger.error('Lỗi gọi hệ thống xử lý (clone): ' + (err && err.message ? err.message : err));
+    }
+  }
+}
+
+// =============================================================
+//  Gọi sau khi lệnh chạy xong: ghi số xu vừa kiếm được vào sổ của cụm
+//
+//  Ba tham số đầu trước đây không dùng tới nhưng vẫn phải giữ đúng vị
+//  trí vì runner đang gọi after(client, command, ctx, track). Nay ta dùng
+//  `client` thật để ghi log khi có lỗi, thay vì âm thầm bỏ qua (LTS).
+// =============================================================
+function after(client, _command, _ctx, track) {
   try {
     if (!track || !track.userId) return;
     const delta = walletBalance(track.userId) - Number(track.before || 0);
     if (delta > 0) noteEarn(track.userId, delta);
-  } catch {
-    /* bỏ qua */
+  } catch (err) {
+    if (client && client.logger && client.logger.error) {
+      client.logger.error('Lỗi ghi nhận xu sau lệnh: ' + (err && err.message ? err.message : err));
+    }
   }
 }
 
@@ -786,6 +990,18 @@ function noteMessage(client, message) {
     if (!rec) return;
     rec.msgCount = Math.min(1e9, (rec.msgCount || 0) + 1);
     rec.last = Date.now();
+    // --- LTS: báo cho engine biết đây là dấu hiệu NGƯỜI THẬT ---
+    // Người chịu ngồi chat bình thường (chứ không chỉ spam lệnh kiếm xu)
+    // gần như chắc chắn là người thật. Trước đây hàm noteHuman() đã
+    // được viết trong engine nhưng KHÔNG NƠI NÀO gọi tới -> bộ giảm oan
+    // nằm chết. Giờ nối vào đây để nó thật sự hạ điểm nghi dùng máy.
+    if (isAutomationOn()) {
+      try {
+        engine.noteHuman(userId, 1, rec.last);
+      } catch {
+        /* bỏ qua */
+      }
+    }
     store.touch();
   } catch {
     /* bỏ qua */
@@ -863,7 +1079,7 @@ function checkTransfer(client, fromId, toId, amount) {
 
     if (!altOn) return { ok: true };
 
-    // Tài khoản quá mới không được chuyển xu (chặn đúng khâu tạo acc rồi dệ xu).
+    // Tài khoản quá mới không được chuyển xu (chặn đúng khâu tạo acc rồi dồn xu).
     const minDays = Math.max(0, Number(cfg.minAccountAgeDaysForTransfer) || 0);
     if (minDays > 0) {
       const born = rec.bornAt || alt.snowflakeToMs(from);
@@ -897,11 +1113,12 @@ function checkTransfer(client, fromId, toId, amount) {
       };
     }
 
-    // Chuyển xu giữa hai tài khoản trong cùng một cụm -> chắc chắn là dệ xu.
+    // Chuyển xu giữa hai tài khoản trong cùng một cụm -> chắc chắn là dồn xu.
     if (cfg.blockIntraClusterTransfer) {
       const other = store.peek(to);
       const sameCluster = rec.cluster && other && other.cluster && rec.cluster === other.cluster;
-      const linked = store.links().some((l) => (l.a === from && l.b === to) || (l.a === to && l.b === from));
+      // Tra qua chỉ mục liên kết: O(bậc) thay vì quét toàn bộ danh sách liên kết.
+      const linked = store.linkedTo(from).includes(to);
       if (sameCluster || linked) {
         store.noteTransfer(from, to, amount, true);
         store.log('transfer', from, `Chặn chuyển ${amount} xu sang ${to} (cùng cụm/đã liên kết)`);
@@ -916,6 +1133,10 @@ function checkTransfer(client, fromId, toId, amount) {
 
     return { ok: true };
   } catch (err) {
+    // Fail-open (không chặn oan người chơi) NHƯNG phải ghi log, không nuốt lỗi.
+    if (client && client.logger && client.logger.error) {
+      client.logger.error('Lỗi kiểm tra chuyển xu (chống clone): ' + (err && err.message ? err.message : err));
+    }
     return { ok: true };
   }
 }
@@ -929,7 +1150,7 @@ function noteTransfer(client, fromId, toId, amount) {
     if (!from || !to || from === to) return;
     store.noteTransfer(from, to, amount, false);
 
-    // Kiểm tra ngay xem đây có phải dòng tiền một chiều kiểu "dệ xu" hay không.
+    // Kiểm tra ngay xem đây có phải dòng tiền một chiều kiểu "dồn xu" hay không.
     const cfg = store.getConfig();
     const info = funnelInfo(from, cfg);
     if (info.count > 0 && info.to) {
@@ -1218,6 +1439,11 @@ module.exports = {
   refreshEngine,
   fmtDuration,
   dayKey,
+  // --- LTS: nối với hệ thống xử lý & dọn bộ nhớ ---
+  sanctions,
+  sweepMaps,
+  automationEvidence,
+  cloneEvidence,
   store,
   switches: gs,
 };
