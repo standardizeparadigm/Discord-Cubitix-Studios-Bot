@@ -261,12 +261,26 @@ function logEntries(limit = 15) {
 }
 
 function clearLog(by) {
+  // LỖI CŨ: hàm này thêm một dòng nhật ký với khoá giả 'all' rồi lại lọc
+  // bỏ chính dòng đó ở câu sau (vì 'all' không đăng ký) — tức là việc "ghi
+  // dấu ai xoá nhật ký" hoàn toàn VÔ TÁC DỤNG, cuối cùng chủ bot
+  // không bao giờ biết ai đã xoá. Nay lưu mốc xoá ra ngoài mảng log.
+  const n = state.log.length;
   state.log = [];
-  pushLog('all', isOn('all'), by, 'Đã xoá nhật ký công tắc');
-  // Dòng vừa thêm chỉ mang tính đánh dấu; nếu khoá 'all' chưa đăng ký thì bỏ luôn.
-  state.log = state.log.filter((e) => registry.has(e.key));
+  state.logClearedAt = Date.now();
+  state.logClearedBy = String((by && (by.tag || by.username || by)) || 'không rõ').slice(0, 60);
+  state.logClearedCount = n;
   persistNow();
   return true;
+}
+
+// Ai đã xoá nhật ký lần cuối (dùng cho bảng điều khiển).
+function lastClear() {
+  return {
+    at: Number(state.logClearedAt) || 0,
+    by: String(state.logClearedBy || ''),
+    count: Number(state.logClearedCount) || 0,
+  };
 }
 
 module.exports = {
@@ -284,5 +298,6 @@ module.exports = {
   onChange,
   logEntries,
   clearLog,
+  lastClear,
   flush: persistNow,
 };
