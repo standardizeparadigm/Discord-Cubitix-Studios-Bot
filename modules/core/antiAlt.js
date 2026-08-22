@@ -66,18 +66,27 @@ const DEFAULTS = {
   funnelMinTransfers: 3, // ít nhất 3 lần chuyển
   funnelMinAmount: 1500, // và tổng từ 1.500 xu
   funnelFullTransfers: 8,
+  funnelFullAmount: 60000, // [LTS] dồn từ 60.000 xu -> dấu hiệu tối đa
   hubMinSenders: 3, // một người nhận xu một chiều từ 3+ acc -> đầu mối
+  hubFullSenders: 7, // [LTS] 7+ acc dồn xu về -> chắc chắn là đầu mối
+
+  // --- Thuộc cụm lớn (LTS) ---
+  clusterWarnSize: 3, // cụm từ 3 thành viên -> bắt đầu nghi
+  clusterFullSize: 8, // cụm từ 8 thành viên -> rất đáng nghi
 
   weights: {
-    newAccount: 20,
-    funnel: 22,
-    behaviour: 14,
-    joinBurst: 14,
-    sharedInviter: 12,
-    nameTwin: 12,
-    birthCluster: 10,
-    noSocial: 8,
-    defaultAvatar: 8,
+    newAccount: 18,
+    funnel: 20,
+    behaviour: 13,
+    joinBurst: 12,
+    sharedInviter: 11,
+    nameTwin: 11,
+    birthCluster: 9,
+    noSocial: 7,
+    defaultAvatar: 7,
+    // --- LTS ---
+    hub: 16, // vai "đầu mối thu xu" (acc chính hướng lợi)
+    cluster: 10, // thuộc một cụm nhiều thành viên
   },
   // Ngưỡng xử lý
   thresholds: { watch: 34, quarantine: 55, freeze: 76 },
@@ -99,6 +108,8 @@ const FLAG_LABELS = {
   birthCluster: 'ngày tạo tài khoản sát với tài khoản khác',
   noSocial: 'đánh rất nhiều lệnh nhưng không hề trò chuyện',
   defaultAvatar: 'chưa từng đổi ảnh đại diện',
+  hub: 'đầu mối thu xu từ nhiều tài khoản khác',
+  cluster: 'thuộc một cụm nhiều tài khoản liên hệ với nhau',
 };
 
 const TIER_LABELS = {
@@ -154,45 +165,138 @@ function nameStem(name) {
   return stripped.length >= 3 ? stripped : n;
 }
 
-// Khoảng cách Levenshtein (số phép sửa tối thiểu để biến a thành b).
-function levenshtein(a, b) {
-  const s = String(a == null ? '' : a);
-  const t = String(b == null ? '' : b);
+/**
+ * Khoảng cách Levenshtein (số phép sửa tối thiểu để biến a thành b).
+ *
+ * Bản LTS thêm 3 tối ưu để chạy nhanh hơn nhiều khi so hàng chục tên một lúc:
+ *  1. `cutoff`  : nếu chắc chắn đã vượt ngưỡng thì dừng sớm, trả về cutoff.
+ *  2. Cắt đầu/cuối: bỏ phần đầu và phần đuôi giống nhau trước khi tính.
+ *  3. Dải Ukkonen: chỉ tính các ô nằm trong dải quanh đường chéo.
+ *
+ * @param {string} a
+ * @param {string} b
+ * @param {number} [cutoff] ngưỡng dừng sớm (tuỳ chọn)
+ * @returns {number} khoảng cách, hoặc >= cutoff nếu đã vượt ngưỡng
+ */
+function levenshtein(a, b, cutoff) {
+  let s = String(a == null ? '' : a);
+  let t = String(b == null ? '' : b);
   if (s === t) return 0;
+
+  const limit = Number.isFinite(Number(cutoff)) && Number(cutoff) > 0 ? Math.floor(Number(cutoff)) : Infinity;
+
+  // Luôn để s là chuỗi ngắn hơn -> ít bộ nhớ hơn.
+  if (s.length > t.length) {
+    const tmp = s;
+    s = t;
+    t = tmp;
+  }
+
+  // Chênh lệch độ dài đã là chặn dưới của khoảng cách -> thoát ngay.
+  if (t.length - s.length >= limit) return limit;
+  if (!s.length) return t.length;
+
+  // (2) Bỏ phần đầu giống nhau.
+  let start = 0;
+  while (start < s.length && s[start] === t[start]) start++;
+  if (start > 0) {
+    s = s.slice(start);
+    t = t.slice(start);
+  }
+  if (!s.length) return t.length;
+
+  // Bỏ phần đuôi giống nhau.
+  let end = 0;
+  while (end < s.length && s[s.length - 1 - end] === t[t.length - 1 - end]) end++;
+  if (end > 0) {
+    s = s.slice(0, s.length - end);
+    t = t.slice(0, t.length - end);
+  }
   if (!s.length) return t.length;
   if (!t.length) return s.length;
+
   // Chỉ giữ 2 hàng để tiết kiệm bộ nhớ.
-  let prev = new Array(t.length + 1);
-  let cur = new Array(t.length + 1);
-  for (let j = 0; j <= t.length; j++) prev[j] = j;
+  const n = t.length;
+  let prev = new Array(n + 1);
+  let cur = new Array(n + 1);
+  for (let j = 0; j <= n; j++) prev[j] = j;
+
+  // (3) Dải Ukkonen: ngoài dải này thì khoảng cách chắc chắn > limit.
+  const band = limit === Infinity ? n : Math.max(limit, n - s.length);
+
   for (let i = 1; i <= s.length; i++) {
+    const from = Math.max(1, i - band);
+    const to = Math.min(n, i + band);
     cur[0] = i;
-    for (let j = 1; j <= t.length; j++) {
+    // Các ô ngoài dải coi như vô cực để không bị dùng nhầm.
+    if (from > 1) cur[from - 1] = Infinity;
+    let rowMin = Infinity;
+    for (let j = from; j <= to; j++) {
       const cost = s[i - 1] === t[j - 1] ? 0 : 1;
-      cur[j] = Math.min(cur[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+      const v = Math.min(cur[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+      cur[j] = v;
+      if (v < rowMin) rowMin = v;
     }
+    if (to < n) cur[to + 1] = Infinity;
+    // (1) Cả hàng đã vượt ngưỡng -> không thể tốt hơn nữa.
+    if (rowMin >= limit) return limit;
     const tmp = prev;
     prev = cur;
     cur = tmp;
   }
-  return prev[t.length];
+  const out = prev[n];
+  return Number.isFinite(out) ? Math.min(out, limit) : limit;
 }
 
-// Độ giống nhau của hai tên, 0..1.
-// Trùng phần gốc (bỏ số đuôi) được tính là rất giống — đúng kiểu acc clone.
+// Tách tên thành "gốc chữ" + "phần số", ví dụ 'nam_2024' -> { stem:'nam', digits:'2024' }.
+// Acc clone hay đặt tên theo mẫu này nên tách ra so riêng sẽ chính xác hơn.
+function splitNameParts(name) {
+  const n = normalizeName(name);
+  const m = /^([a-z]*)(\d*)$/.exec(n);
+  if (m) return { stem: m[1], digits: m[2], raw: n };
+  return { stem: n.replace(/\d/g, ''), digits: (n.match(/\d/g) || []).join(''), raw: n };
+}
+
+/**
+ * Độ giống nhau của hai tên, 0..1.
+ *
+ * Bản LTS nhận thêm các mẫu đặt tên acc clone phổ biến:
+ *  - Trùng gốc, khác số:   nam1 / nam2 / nam2024      -> rất giống
+ *  - Gốc là tiền tố:       nam / namcute              -> khá giống
+ *  - Chỉ khác 1-2 ký tự:   minhquan / minhquab        -> theo Levenshtein
+ */
 function nameSimilarity(a, b) {
   const na = normalizeName(a);
   const nb = normalizeName(b);
   if (!na || !nb) return 0;
   if (na === nb) return 1;
 
+  const pa = splitNameParts(a);
+  const pb = splitNameParts(b);
+
+  // Cùng gốc chữ, chỉ khác đuôi số -> gần như chắc chắn cùng một người.
+  if (pa.stem && pa.stem === pb.stem && pa.stem.length >= 3 && (pa.digits || pb.digits)) return 0.96;
+
   const sa = nameStem(a);
   const sb = nameStem(b);
   if (sa && sa === sb && sa.length >= 3) return 0.95;
 
+  // Một tên là tiền tố của tên kia (nam / namcute) -> tính theo tỉ lệ phủ.
+  if (pa.stem.length >= 4 && pb.stem.length >= 4) {
+    const shortStem = pa.stem.length <= pb.stem.length ? pa.stem : pb.stem;
+    const longStem = pa.stem.length <= pb.stem.length ? pb.stem : pa.stem;
+    if (longStem.startsWith(shortStem)) {
+      const cover = shortStem.length / longStem.length;
+      if (cover >= 0.6) return Math.max(0.7, Math.min(0.93, 0.6 + cover * 0.33));
+    }
+  }
+
   const maxLen = Math.max(na.length, nb.length);
   if (maxLen === 0) return 0;
-  const ratio = 1 - levenshtein(na, nb) / maxLen;
+  // Chỉ cần biết "có giống hay không": bỏ sớm khi khoảng cách quá lớn.
+  const cut = Math.max(2, Math.ceil(maxLen * 0.6));
+  const dist = levenshtein(na, nb, cut);
+  const ratio = 1 - dist / maxLen;
   return Math.max(0, Math.min(1, ratio));
 }
 
@@ -457,38 +561,63 @@ function ageRisk(ageDays, cfg = DEFAULTS) {
  *   behaviourSimilarity : 0..1
  *   birthCluster     : số acc tạo sát giờ
  *   funnelTransfers  : số lần chuyển xu một chiều
+ *   funnelAmount     : tổng xu đã chuyển một chiều [LTS]
+ *   hubSenders       : số acc dồn xu VỀ người này (acc chính) [LTS]
+ *   clusterSize      : số thành viên trong cụm của người này [LTS]
  *   commandCount / messageCount
  * @param {object} options cấu hình ghi đè
- * @returns {{risk:number, tier:string, flags:string[], labels:string[], parts:object}}
+ * @returns {{risk:number, tier:string, flags:string[], labels:string[], parts:object,
+ *           confidence:number, evidenceCount:number}}
  */
 function riskScore(f = {}, options = {}) {
+  const src = f && typeof f === 'object' ? f : {};
   const cfg = Object.assign({}, DEFAULTS, options || {});
   const weights = Object.assign({}, DEFAULTS.weights, cfg.weights || {});
   const thresholds = Object.assign({}, DEFAULTS.thresholds, cfg.thresholds || {});
 
   const parts = {};
-  parts.newAccount = ageRisk(f.ageDays == null ? null : Number(f.ageDays), cfg);
-  parts.defaultAvatar = f.defaultAvatar ? 1 : 0;
-  parts.joinBurst = ramp(f.joinBurst, cfg.joinBurstWarn, cfg.joinBurstFull);
-  parts.sharedInviter = ramp(f.sharedInviter, cfg.sharedInviterWarn, cfg.sharedInviterFull);
-  parts.nameTwin = ramp(f.nameSimilarity, cfg.nameSimilarWarn, cfg.nameSimilarFull);
-  parts.behaviour = ramp(f.behaviourSimilarity, cfg.behaviourWarn, cfg.behaviourFull);
-  parts.birthCluster = ramp(f.birthCluster, cfg.birthWarn, cfg.birthFull);
-  parts.funnel = ramp(f.funnelTransfers, cfg.funnelMinTransfers, cfg.funnelFullTransfers);
+  parts.newAccount = ageRisk(src.ageDays == null ? null : Number(src.ageDays), cfg);
+  parts.defaultAvatar = src.defaultAvatar ? 1 : 0;
+  parts.joinBurst = ramp(src.joinBurst, cfg.joinBurstWarn, cfg.joinBurstFull);
+  parts.sharedInviter = ramp(src.sharedInviter, cfg.sharedInviterWarn, cfg.sharedInviterFull);
+  parts.nameTwin = ramp(src.nameSimilarity, cfg.nameSimilarWarn, cfg.nameSimilarFull);
+  parts.behaviour = ramp(src.behaviourSimilarity, cfg.behaviourWarn, cfg.behaviourFull);
+  parts.birthCluster = ramp(src.birthCluster, cfg.birthWarn, cfg.birthFull);
 
-  const cmdCount = Math.max(0, Number(f.commandCount) || 0);
-  const msgCount = Math.max(0, Number(f.messageCount) || 0);
+  // --- Dồn xu một chiều (LTS): xét cả SỐ LẦN và SỐ TIỀN ---
+  // Trước đây chỉ đếm số lần, nên 10 lần × 1 xu cũng bị chấm như
+  // 10 lần × 100.000 xu. Nay lấy mức cao hơn giữa hai tiêu chí.
+  const funnelByCount = ramp(src.funnelTransfers, cfg.funnelMinTransfers, cfg.funnelFullTransfers);
+  const funnelByAmount = ramp(src.funnelAmount, cfg.funnelMinAmount, cfg.funnelFullAmount);
+  parts.funnel = Math.max(funnelByCount, funnelByAmount);
+
+  const cmdCount = Math.max(0, Number(src.commandCount) || 0);
+  const msgCount = Math.max(0, Number(src.messageCount) || 0);
   parts.noSocial = cmdCount >= cfg.noSocialMinCommands && msgCount <= cfg.noSocialMaxMessages ? 1 : 0;
+
+  // --- Đầu mối thu xu (LTS) ---
+  // Acc chính không có dấu hiệu nào của acc clone (acc lâu năm, có avatar,
+  // chat nhiều) nên trước đây luôn thoát. Nhưng chính nó mới là người
+  // hướng lợi, nên phải có dấu hiệu riêng cho vai "đầu mối".
+  parts.hub = ramp(src.hubSenders, cfg.hubMinSenders, cfg.hubFullSenders);
+
+  // --- Thuộc cụm lớn (LTS) ---
+  parts.cluster = ramp(src.clusterSize, cfg.clusterWarnSize, cfg.clusterFullSize);
 
   let total = 0;
   let maxTotal = 0;
   const flags = [];
+  let strongFlags = 0;
   for (const key of Object.keys(weights)) {
     const w = Number(weights[key]) || 0;
     const p = Math.max(0, Math.min(1, Number(parts[key]) || 0));
+    parts[key] = p;
     total += w * p;
     maxTotal += w;
-    if (p >= 0.5) flags.push(key);
+    if (p >= 0.5) {
+      flags.push(key);
+      strongFlags++;
+    }
   }
 
   const risk = maxTotal > 0 ? Math.round((total / maxTotal) * 100) : 0;
@@ -499,13 +628,31 @@ function riskScore(f = {}, options = {}) {
   else if (risk >= thresholds.quarantine) tier = 'quarantine';
   else if (risk >= thresholds.watch) tier = 'watch';
 
+  // --- Độ tin cậy (LTS) ---
+  // Bao nhiêu loại bằng chứng ĐỘC LẬP đã được thu thập? Một dấu hiệu
+  // đơn lẻ (ví dụ chỉ có "acc mới") thì không đủ để kết luận gì cả.
+  const evidenceCount = Object.keys(parts).filter((k) => parts[k] > 0.15).length;
+  const dataConf = ramp(cmdCount, 10, 60);
+  const flagConf = ramp(strongFlags, 2, 4);
+  const spreadConf = ramp(evidenceCount, 2, 5);
+  const confidence = Math.max(
+    0,
+    Math.min(1, Math.cbrt(Math.max(0.03, dataConf) * Math.max(0.05, flagConf) * Math.max(0.05, spreadConf))),
+  );
+
   return {
     risk,
+    // Alias cho dễ đọc ở nơi khác.
+    score: risk,
     tier,
     tierLabel: TIER_LABELS[tier] || tier,
     flags,
     labels: flags.map((k) => FLAG_LABELS[k] || k),
     parts,
+    confidence,
+    confidencePercent: Math.round(confidence * 100),
+    strongFlags,
+    evidenceCount,
   };
 }
 
@@ -526,6 +673,7 @@ module.exports = {
   accountAgeDays,
   normalizeName,
   nameStem,
+  splitNameParts,
   levenshtein,
   nameSimilarity,
   cosineSimilarity,
