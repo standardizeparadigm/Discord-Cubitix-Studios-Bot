@@ -12,7 +12,7 @@ nhiều màu sắc và đầy đủ thể loại lệnh. Viết bằng **discord
 
 - 🎨 Embed nhiều màu, biểu tượng, bố cục gọn gàng.
 - 🎬 Hiệu ứng động: thanh loading, gõ chữ, pháo hoa, cầu vồng, "hack" vui, máy quay slots, xì dách.
-- 🧩 Hỗ trợ cả lệnh **prefix** (`!`) lẫn lệnh **slash** (`/`).
+- 🧩 Hỗ trợ cả lệnh **prefix** (`c`) lẫn lệnh **slash** (`/`).
 - 💰 Hệ thống kinh tế: kiếm xu qua **đi làm, điểm danh (có chuỗi thưởng), cờ bạc** (slots/blackjack/coinflip) và **câu cá**. Các lệnh cờ bạc giới hạn cược **tối đa 250.000 xu/lượt** (áp dụng cả khi cược `all`). Bảng xếp hạng `top` **chia trang 10 người/trang** với nút ⏮️ ◀️ ▶️ ⏭️, menu đổi nhanh **5 hạng mục** (xu · cá · loài cá · may mắn · streak) và nút 🎯 nhảy thẳng tới hạng của chính bạn.
 - 🎣 Hệ thống câu cá phong phú: **870 loài cá** qua 8 độ hiếm (common → hidden) với **tỉ lệ ra & giá bán đã cân bằng** (phí câu 10 xu — common 3 xu · uncommon 10 · rare 30 · epic 150 · mythic 1.000 · legendary 6.000 · fable 40.000 · hidden 150.000 xu) với hiệu ứng emoji động cho cá cực hiếm; bể cá (aquarium), bán cá, **Fishdex** lưu tiến độ trọn đời (không mất khi bán), thống kê (`fishstats`) và bảng xếp hạng cần thủ (`fishtop`). Lệnh `profile` xem hồ sơ tổng hợp.
 - 🛡️ Quản lý hiện đại: **chống spam thông minh (antispam)**, **timeout/untimeout**, **unban**, kick, ban, clear, khóa kênh, cảnh cáo.
