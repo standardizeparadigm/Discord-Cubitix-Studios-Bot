@@ -384,7 +384,7 @@ function panelRows(client, disabled, view, category) {
       .setEmoji('\u267e\ufe0f')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(off || !on || !s.until),
-    // MỚI: vào thẳng trang bảo trì theo lệnh ngay trên dashboard.
+    // MỚI: vào thẳng trang bảo trì theo lệnh ngay trên bảng này.
     new ButtonBuilder()
       .setCustomId('mt:cmdview')
       .setLabel(cmds.length ? 'Bảo trì theo lệnh (' + cmds.length + ')' : 'Bảo trì theo lệnh')
