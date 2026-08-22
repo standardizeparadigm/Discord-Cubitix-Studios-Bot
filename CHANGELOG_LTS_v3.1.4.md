@@ -1,8 +1,5 @@
 # Cubitix Studios Bot — Bản LTS v3.1.4
 
-> **182 bài kiểm tra tự động đều ĐẠT** (`npm run selftest`, không cần mạng, không cần token).
-> Bản này nâng cấp trực tiếp từ **v3.1.0-LTS**, giữ nguyên toàn bộ tính năng cũ.
-
 ---
 
 ## 1. Captcha — nâng cấp toàn diện
