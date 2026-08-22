@@ -11,7 +11,7 @@
     "test": "node tools/selftest.js"
   },
   "author": "Cubitix Studios",
-  "license": "MIT",
+  "license": "CC-BY-NC-SA-4.0",
   "engines": {
     "node": ">=18.0.0"
   },
