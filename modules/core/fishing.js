@@ -859,6 +859,190 @@ const SPECIES = [
 
   // ---- Hidden / Ẩn giấu (+1) ----
   { id: 'vo_tan_hu_ngu', name: 'Vô Tận Hư Ngư', emoji: '🕳️', rarity: 'hidden' },
+
+  // =============================================================
+  //  BỔ SUNG LTS ĐỢT 5 (v3.1.4)
+  //  Thêm nhiều loài ở các bậc DỄ GẶP (common/uncommon/rare/epic) để mỗi
+  //  lần câu đều mới mẻ, và CHỬ 1-2 loài cho các bậc cực hiếm
+  //  (mythic → hidden) để không làm loãng giá trị của cá quý.
+  // =============================================================
+  // ---- Common / Thường (+58) ----
+  { id: 'ca_lu_du_do', name: 'Cá lù đù đỏ', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_phen_khoai', name: 'Cá phèn khoai', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_bon_luoi_trau', name: 'Cá bơn lưỡi trâu', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_sat_ran', name: 'Cá Sặt Rằn', emoji: '🐠', rarity: 'common' },
+  { id: 'ca_sat_diep', name: 'Cá Sặc Điệp', emoji: '🐠', rarity: 'common' },
+  { id: 'ca_chim_an_do', name: 'Cá chim ấn độ', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_keo_vay_to_lts5', name: 'Cá kèo vảy to', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_lim_kim', name: 'Cá Lìm Kìm', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_thoi_loi', name: 'Cá Thòi Lòi', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_moi_co_hoa', name: 'Cá mòi cờ hoa', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_chot_trang', name: 'Cá Chốt Trắng', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_keo_vay_to', name: 'Cá Kèo Vẩy To', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_xac_soc', name: 'Cá Xác Sọc', emoji: '🐠', rarity: 'common' },
+  { id: 'ca_linh_ria', name: 'Cá Linh Rìa', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_ngua_van_suoi', name: 'Cá ngựa vằn suối', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_mai_bau', name: 'Cá mại bầu', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_he_vang_lts5', name: 'Cá He Vàng', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_huong_dong', name: 'Cá Hường Đồng', emoji: '🐠', rarity: 'common' },
+  { id: 'ca_ro_bien_non', name: 'Cá Rô Biển Non', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_thieu_mat_to', name: 'Cá thiểu mắt to', emoji: '🐍', rarity: 'common' },
+  { id: 'ca_chach_bun', name: 'Cá Chạch Bùn', emoji: '🐍', rarity: 'common' },
+  { id: 'ca_danh_nam_bo', name: 'Cá dảnh nam bộ', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_ngat_ban', name: 'Cá Ngát Bản', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_uc_thia', name: 'Cá Ú Thìa', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_tren_bau', name: 'Cá Trèn Bầu', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_bop_bien_lts5', name: 'Cá bọp biển', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_duong_song', name: 'Cá Duồng Sông', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_coc_song', name: 'Cá Cóc Sông', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_rung_da', name: 'Cá Rưng Đá', emoji: '🪨', rarity: 'common' },
+  { id: 'ca_chai_non', name: 'Cá Chài Non', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_lang_giay', name: 'Cá Lăng Giấy', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_dong_non', name: 'Cá Đồng Non', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_tue_bac', name: 'Cá Tuệ Bạc', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_may_mua', name: 'Cá Mây Mưa', emoji: '🌧️', rarity: 'common' },
+  { id: 'ca_la_tre', name: 'Cá Lá Tre', emoji: '🎃', rarity: 'common' },
+  { id: 'ca_rong_reu', name: 'Cá Rong Rêu', emoji: '🪸', rarity: 'common' },
+  { id: 'ca_soi_nho', name: 'Cá Sỏi Nhỏ', emoji: '🪨', rarity: 'common' },
+  { id: 'ca_bui_cat', name: 'Cá Bụi Cát', emoji: '🏖️', rarity: 'common' },
+  { id: 'ca_ao_bun', name: 'Cá Ao Bùn', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_kenh_nho', name: 'Cá Kênh Nhỏ', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_ruong_lua', name: 'Cá Ruộng Lúa', emoji: '🌾', rarity: 'common' },
+  { id: 'ca_mua_dau', name: 'Cá Mưa Đầu', emoji: '🌧️', rarity: 'common' },
+  { id: 'ca_be_nuoc', name: 'Cá Bề Nước', emoji: '💧', rarity: 'common' },
+  { id: 'ca_bot_song', name: 'Cá Bọt Sóng', emoji: '🌊', rarity: 'common' },
+  { id: 'ca_huong_ven', name: 'Cá hường vện', emoji: '🦐', rarity: 'common' },
+  { id: 'tep_bac_nho', name: 'Tép Bạc Nhỏ', emoji: '🦐', rarity: 'common' },
+  { id: 'oc_buou_nho', name: 'Ốc Bươu Nhỏ', emoji: '🐌', rarity: 'common' },
+  { id: 'oc_len_bun', name: 'Ốc Lên Bùn', emoji: '🐚', rarity: 'common' },
+  { id: 'ca_suot_gai', name: 'Cá suốt gai', emoji: '🐚', rarity: 'common' },
+  { id: 'trai_dong', name: 'Trai Đồng', emoji: '🐚', rarity: 'common' },
+  { id: 'cua_dong_nho', name: 'Cua Đồng Nhỏ', emoji: '🦀', rarity: 'common' },
+  { id: 'ca_lau_kinh', name: 'Cá Làu Kính', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_nhong_duoi_vang', name: 'Cá nhỏng đuôi vàng', emoji: '🌈', rarity: 'common' },
+  { id: 'ca_kiem_non', name: 'Cá Kiếm Non', emoji: '🐠', rarity: 'common' },
+  { id: 'ca_mun_nho', name: 'Cá Mụn Nhỏ', emoji: '🐟', rarity: 'common' },
+  { id: 'ca_soc_ngua', name: 'Cá Sọc Ngựa', emoji: '🐠', rarity: 'common' },
+  { id: 'ca_neon_nho', name: 'Cá Nên Nhỏ', emoji: '✨', rarity: 'common' },
+  { id: 'ca_bong_ma_bun', name: 'Cá Bống Mai Bùn', emoji: '🐟', rarity: 'common' },
+  // ---- Uncommon / Ít gặp (+46) ----
+  { id: 'ca_dia_bong', name: 'Cá đìa bông', emoji: '🐟', rarity: 'uncommon' },
+  { id: 'ca_bong_song_da', name: 'Cá Bồng Sông Đà', emoji: '🐟', rarity: 'uncommon' },
+  { id: 'ca_ram_xanh', name: 'Cá Rầm Xanh', emoji: '🐟', rarity: 'uncommon' },
+  { id: 'ca_do_nghe', name: 'Cá dò nghệ', emoji: '🐟', rarity: 'uncommon' },
+  { id: 'ca_khoai_bac', name: 'Cá khoai bạc', emoji: '🐟', rarity: 'uncommon' },
+  { id: 'ca_bong_cau', name: 'Cá bống cau', emoji: '🐟', rarity: 'uncommon' },
+  { id: 'ca_tra_soc', name: 'Cá Trà Sóc', emoji: '🐟', rarity: 'uncommon' },
+  { id: 'ca_ho_dat', name: 'Cá Hô Đất', emoji: '🐟', rarity: 'uncommon' },
+  { id: 'ca_vo_dem', name: 'Cá Vồ Đém', emoji: '🐟', rarity: 'uncommon' },
+  { id: 'ca_trac_duoi_dai', name: 'Cá trác đuôi dài', emoji: '🐟', rarity: 'uncommon' },
+  { id: 'ca_hu_bac', name: 'Cá Hú Bạc', emoji: '🐟', rarity: 'uncommon' },
+  { id: 'ca_leo_dai', name: 'Cá Leo Dài', emoji: '🐟', rarity: 'uncommon' },
+  { id: 'ca_ket_song', name: 'Cá Kết Sông', emoji: '🐟', rarity: 'uncommon' },
+  { id: 'ca_trao_mat_to', name: 'Cá tráo mắt to', emoji: '🐟', rarity: 'uncommon' },
+  { id: 'ca_dieu_hong_lts5', name: 'Cá Điêu Hồng', emoji: '🐠', rarity: 'uncommon' },
+  { id: 'ca_nuc_thuon', name: 'Cá nục thuôn', emoji: '🐠', rarity: 'uncommon' },
+  { id: 'ca_ro_phi_van', name: 'Cá Rô Phi Vạn', emoji: '🐟', rarity: 'uncommon' },
+  { id: 'ca_bong_lau_lts5', name: 'Cá Bồng Lau', emoji: '🐟', rarity: 'uncommon' },
+  { id: 'ca_mang_sua', name: 'Cá Măng Sữa', emoji: '🥛', rarity: 'uncommon' },
+  { id: 'ca_song_soc', name: 'Cá Sòng Sọc', emoji: '🐠', rarity: 'uncommon' },
+  { id: 'ca_nuc_bien', name: 'Cá Nục Biển', emoji: '🐟', rarity: 'uncommon' },
+  { id: 'ca_banh_duong', name: 'Cá Bánh Đường', emoji: '🐟', rarity: 'uncommon' },
+  { id: 'ca_hong_bien', name: 'Cá Hồng Biển', emoji: '🐠', rarity: 'uncommon' },
+  { id: 'ca_sao_cham', name: 'Cá sạo chấm', emoji: '🐠', rarity: 'uncommon' },
+  { id: 'ca_dia_thanh', name: 'Cá Đĩa Thanh', emoji: '🐠', rarity: 'uncommon' },
+  { id: 'ca_bo_da', name: 'Cá Bò Da', emoji: '🐡', rarity: 'uncommon' },
+  { id: 'ca_nhong_nho', name: 'Cá Nhọng Nhỏ', emoji: '🐟', rarity: 'uncommon' },
+  { id: 'ca_hong_cham_den', name: 'Cá hồng chấm đen', emoji: '🐠', rarity: 'uncommon' },
+  { id: 'ca_duoi_bun', name: 'Cá Đuối Bùn', emoji: '🦈', rarity: 'uncommon' },
+  { id: 'ca_ep_bien', name: 'Cá Ép Biển', emoji: '🐟', rarity: 'uncommon' },
+  { id: 'ca_lieu_bac', name: 'Cá Liễu Bạc', emoji: '🐟', rarity: 'uncommon' },
+  { id: 'ca_dao_bac', name: 'Cá Đào Bạc', emoji: '🐟', rarity: 'uncommon' },
+  { id: 'ca_suong_som', name: 'Cá Sương Sớm', emoji: '🌫️', rarity: 'uncommon' },
+  { id: 'ca_thac_nho', name: 'Cá Thác Nhỏ', emoji: '💦', rarity: 'uncommon' },
+  { id: 'ca_khe_da', name: 'Cá Khe Đá', emoji: '🪨', rarity: 'uncommon' },
+  { id: 'ca_suoi_lanh', name: 'Cá Suối Lạnh', emoji: '🧊', rarity: 'uncommon' },
+  { id: 'ca_dam_may', name: 'Cá Đám Mây', emoji: '☁️', rarity: 'uncommon' },
+  { id: 'ca_gio_mua', name: 'Cá Gió Mùa', emoji: '🌬️', rarity: 'uncommon' },
+  { id: 'ca_gay_bien', name: 'Cá gáy biển', emoji: '🦐', rarity: 'uncommon' },
+  { id: 'tom_su_dat', name: 'Tôm Sú Đất', emoji: '🦐', rarity: 'uncommon' },
+  { id: 'cua_bien_non', name: 'Cua Biển Non', emoji: '🦀', rarity: 'uncommon' },
+  { id: 'muc_ong_nho', name: 'Mực Ống Nhỏ', emoji: '🦑', rarity: 'uncommon' },
+  { id: 'bach_tuoc_nho', name: 'Bạch Tuộc Nhỏ', emoji: '🐙', rarity: 'uncommon' },
+  { id: 'sao_bien_nho', name: 'Sao Biển Nhỏ', emoji: '⭐', rarity: 'uncommon' },
+  { id: 'ca_kem_hoa', name: 'Cá kẽm hoa', emoji: '🌀', rarity: 'uncommon' },
+  { id: 'ca_dia_cong', name: 'Cá dìa công', emoji: '🐡', rarity: 'uncommon' },
+  // ---- Rare / Hiếm (+34) ----
+  { id: 'ca_mo_xanh_duong', name: 'Cá mó xanh dương', emoji: '🐠', rarity: 'rare' },
+  { id: 'ca_bang_chai_van', name: 'Cá bàng chài vằn', emoji: '⭐', rarity: 'rare' },
+  { id: 'ca_chim_hoang_hau', name: 'Cá Chim Hoàng Hậu', emoji: '👑', rarity: 'rare' },
+  { id: 'ca_hong_vy_bien', name: 'Cá Hồng Vỹ Biển', emoji: '🐠', rarity: 'rare' },
+  { id: 'ca_kiem_xanh_bien', name: 'Cá Kiếm Xanh Biển', emoji: '⚔️', rarity: 'rare' },
+  { id: 'ca_nhong_lon_lts5', name: 'Cá Nhọng Lịch', emoji: '🐍', rarity: 'rare' },
+  { id: 'ca_dua_bien', name: 'Cá Đứa Biển', emoji: '🐟', rarity: 'rare' },
+  { id: 'ca_bop_lon', name: 'Cá Bớp Lớn', emoji: '🐟', rarity: 'rare' },
+  { id: 'ca_thia_duoi_nheo', name: 'Cá thia đuôi nheo', emoji: '🐟', rarity: 'rare' },
+  { id: 'ca_bong_mat_tre', name: 'Cá bống mắt tre', emoji: '🐟', rarity: 'rare' },
+  { id: 'ca_son_xuong', name: 'Cá sơn xương', emoji: '🦋', rarity: 'rare' },
+  { id: 'ca_ngat_song', name: 'Cá ngát sông', emoji: '👼', rarity: 'rare' },
+  { id: 'ca_su_tu_bien', name: 'Cá Sư Tử Biển', emoji: '🦁', rarity: 'rare' },
+  { id: 'ca_da_bao', name: 'Cá Da Báo', emoji: '🐆', rarity: 'rare' },
+  { id: 'ca_ho_van', name: 'Cá Hổ Vân', emoji: '🐅', rarity: 'rare' },
+  { id: 'ca_ran_luoi', name: 'Cá Rắn Lưới', emoji: '🐍', rarity: 'rare' },
+  { id: 'ca_dien_quang', name: 'Cá Điện Quang', emoji: '⚡', rarity: 'rare' },
+  { id: 'ca_uc_thep', name: 'Cá úc thép', emoji: '⚡', rarity: 'rare' },
+  { id: 'ca_bang_gia', name: 'Cá Băng Giá', emoji: '❄️', rarity: 'rare' },
+  { id: 'ca_nham_thach_nho', name: 'Cá Nham Thạch Nhỏ', emoji: '🌋', rarity: 'rare' },
+  { id: 'ca_ngoc_bich', name: 'Cá Ngọc Bích', emoji: '💎', rarity: 'rare' },
+  { id: 'ca_ma_nao', name: 'Cá Mã Não', emoji: '🔮', rarity: 'rare' },
+  { id: 'ca_thuy_tinh', name: 'Cá Thuỷ Tinh', emoji: '🪟', rarity: 'rare' },
+  { id: 'ca_pha_lam', name: 'Cá Pha Lam', emoji: '🔵', rarity: 'rare' },
+  { id: 'ca_hoang_kim_nho', name: 'Cá Hoàng Kim Nhỏ', emoji: '🪙', rarity: 'rare' },
+  { id: 'ca_bac_ha', name: 'Cá Bạc Hà', emoji: '🌿', rarity: 'rare' },
+  { id: 'ca_san_ho_do', name: 'Cá San Hô Đỏ', emoji: '🪸', rarity: 'rare' },
+  { id: 'ca_vuc_sau', name: 'Cá Vực Sâu', emoji: '🕳️', rarity: 'rare' },
+  { id: 'ca_hai_luu', name: 'Cá Hải Lưu', emoji: '🌊', rarity: 'rare' },
+  { id: 'ca_bao_to', name: 'Cá Bão Tố', emoji: '🌪️', rarity: 'rare' },
+  { id: 'ca_sam_set', name: 'Cá Sấm Sét', emoji: '🌩️', rarity: 'rare' },
+  { id: 'muc_khong_lo_nho', name: 'Mực Khổng Lồ Nhỏ', emoji: '🦑', rarity: 'rare' },
+  { id: 'cua_hoang_de_nho', name: 'Cua Hoàng Đế Nhỏ', emoji: '🦀', rarity: 'rare' },
+  { id: 'rua_bien_nho', name: 'Rùa Biển Nhỏ', emoji: '🐢', rarity: 'rare' },
+  // ---- Epic / Sử thi (+24) ----
+  { id: 'ca_rong_kim_long', name: 'Cá Rồng Kim Long', emoji: '🐉', rarity: 'epic' },
+  { id: 'ca_rong_huyet_long', name: 'Cá Rồng Huyết Long', emoji: '🐉', rarity: 'epic' },
+  { id: 'ca_map_voi_con', name: 'Cá Mập Voi Con', emoji: '🦈', rarity: 'epic' },
+  { id: 'ca_vo_co', name: 'Cá vồ cờ', emoji: '🦈', rarity: 'epic' },
+  { id: 'ca_ket_bac', name: 'Cá kết bạc', emoji: '🦈', rarity: 'epic' },
+  { id: 'ca_kiem_hoang_gia', name: 'Cá Kiếm Hoàng Gia', emoji: '⚔️', rarity: 'epic' },
+  { id: 'ca_ho_kim', name: 'Cá Hồ Kim', emoji: '🪙', rarity: 'epic' },
+  { id: 'ca_bach_kim', name: 'Cá Bạch Kim', emoji: '🤈', rarity: 'epic' },
+  { id: 'ca_hoang_hon', name: 'Cá Hoàng Hôn', emoji: '🌅', rarity: 'epic' },
+  { id: 'ca_binh_minh', name: 'Cá Bình Minh', emoji: '🌄', rarity: 'epic' },
+  { id: 'ca_cuc_quang', name: 'Cá Cực Quang', emoji: '🌌', rarity: 'epic' },
+  { id: 'ca_thien_ha', name: 'Cá Thiên Hà', emoji: '🌌', rarity: 'epic' },
+  { id: 'ca_tinh_van', name: 'Cá Tinh Vân', emoji: '✨', rarity: 'epic' },
+  { id: 'ca_hoa_diem', name: 'Cá Hoả Diêm', emoji: '🔥', rarity: 'epic' },
+  { id: 'ca_lam_dien', name: 'Cá Lôi Điện', emoji: '⚡', rarity: 'epic' },
+  { id: 'ca_hac_van', name: 'Cá Hắc Vân', emoji: '🌑', rarity: 'epic' },
+  { id: 'ca_bach_van', name: 'Cá Bạch Vân', emoji: '☁️', rarity: 'epic' },
+  { id: 'ca_thuy_ngan', name: 'Cá Thuỷ Ngân', emoji: '🪞', rarity: 'epic' },
+  { id: 'ca_hoang_thach', name: 'Cá Hoàng Thạch', emoji: '🪨', rarity: 'epic' },
+  { id: 'ca_vuc_tham', name: 'Cá Vực Thầm', emoji: '🕳️', rarity: 'epic' },
+  { id: 'ca_song_than', name: 'Cá Sóng Thần', emoji: '🌊', rarity: 'epic' },
+  { id: 'ca_ngoc_trai_lon', name: 'Cá Ngọc Trai Lớn', emoji: '🪩', rarity: 'epic' },
+  { id: 'ca_thanh_kiem_co', name: 'Cá Thanh Kiếm Cổ', emoji: '🗡️', rarity: 'epic' },
+  { id: 'ca_vuong_mien', name: 'Cá Vương Miện', emoji: '👑', rarity: 'epic' },
+  // ---- Mythic / Thần thoại (+2) ----
+  { id: 'ca_thien_menh', name: 'Cá Thiên Mệnh', emoji: '🔯', rarity: 'mythic' },
+  { id: 'ca_van_co_lang', name: 'Cá Vạn Cổ Lang', emoji: '🌠', rarity: 'mythic' },
+  // ---- Legendary / Huyền thoại (+2) ----
+  { id: 'ca_kim_de_vuong', name: 'Cá Kim Đế Vương', emoji: '👑', rarity: 'legendary' },
+  { id: 'ca_thai_duong_than', name: 'Cá Thái Dương Thần', emoji: '☀️', rarity: 'legendary' },
+  // ---- Fable / Cổ tích (+2) ----
+  { id: 'ca_thuong_co_mong', name: 'Cá Thượng Cổ Mộng', emoji: '🔮', rarity: 'fable' },
+  { id: 'ca_nguyen_khoi_lam', name: 'Cá Nguyên Khởi Lam', emoji: '🔵', rarity: 'fable' },
+  // ---- Hidden / Ẩn giấu (+1) ----
+  { id: 'ca_vo_danh_ngu', name: 'Cá Vô Danh Ngư', emoji: '🕳️', rarity: 'hidden' },
 ];
 
 const SPECIES_BY_ID = Object.fromEntries(SPECIES.map((s) => [s.id, s]));
@@ -902,12 +1086,27 @@ function pickRarity() {
 
 // Bốc một mẻ câu: { species, rarity(meta), rarityKey, value }
 function pickCatch() {
-  const rarityKey = pickRarity();
-  const pool = speciesByRarity(rarityKey);
-  const species = pool[Math.floor(rng.randomFloat() * pool.length)];
-  const meta = rarityMeta(rarityKey);
-  const value = PRICES[rarityKey];
-  return { species, rarity: meta, rarityKey, value };
+  let rarityKey = pickRarity();
+  let pool = speciesByRarity(rarityKey);
+
+  // AN TOÀN (sửa lỗi LTS v3.1.4): nếu một bậc độ hiếm không còn loài nào
+  // (ví dụ sau này có người xoá bớt cá trong SPECIES) thì pool rỗng ->
+  // species = undefined, và mọi chỗ đọc species.emoji / species.name sẽ nổ
+  // giữa lúc đang câu. Tụt dần về bậc common rồi tới toàn bộ danh sách.
+  if (!pool.length) {
+    rarityKey = 'common';
+    pool = speciesByRarity(rarityKey);
+  }
+  if (!pool.length) pool = SPECIES;
+
+  const species = pool[Math.floor(rng.randomFloat() * pool.length)] || SPECIES[0];
+
+  // Lấy độ hiếm THEO ĐÚNG con cá vừa bốc, để giá bán và huy hiệu luôn khớp
+  // với loài (rất quan trọng khi phải dùng danh sách dự phòng ở trên).
+  const key = species && RARITIES[species.rarity] ? species.rarity : rarityKey;
+  const meta = rarityMeta(key);
+  const value = PRICES[key] != null ? PRICES[key] : PRICES.common;
+  return { species, rarity: meta, rarityKey: key, value };
 }
 
 // -------------------------------------------------------------
