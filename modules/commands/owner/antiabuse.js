@@ -16,6 +16,12 @@
 //    - Chọn một người để xem báo cáo chi tiết, cho vào danh sách tin cậy,
 //      gỡ khoá, xoá liên kết hoặc chấm điểm lại
 //    - Xem nhật ký và thống kê
+//
+//  TỪ v3.1.4: lệnh `dashboard` (TRUNG TÂM ĐIỀU KHIỂN) đã được GỘP vào
+//  đây. Bảng này giờ có thêm các trang: Tổng quan hệ thống, Công tắc toàn
+//  cục, Hệ thống xử lý, Sức khoẻ máy móc, Dữ liệu & bảo dưỡng — chọn ở
+//  menu "Chọn trang" ngay hàng đầu. Phần vẽ trang nằm trong
+//  modules/core/dashboardViews.js để file lệnh không phình to.
 // =============================================================
 const {
   ActionRowBuilder,
@@ -30,6 +36,8 @@ const { colors, emoji } = require('../../core/palette');
 const guard = require('../../core/abuseGuard');
 const store = require('../../core/abuseStore');
 const gs = require('../../core/globalSwitch');
+// Các trang của trung tâm điều khiển cũ (lệnh `dashboard`) đã gộp vào lệnh này.
+const dash = require('../../core/dashboardViews');
 
 const PANEL_TIME = 300000; // bảng điều khiển sống 5 phút
 
@@ -61,7 +69,39 @@ const ACTIONS = {
   flagged: ['flagged', 'nghi van', 'nghivan', 'list', 'ds', 'danh sach', 'danhsach'],
   clusters: ['clusters', 'cum', 'cluster', 'nhom', 'group'],
   log: ['log', 'nhat ky', 'nhatky', 'lich su', 'lichsu', 'history'],
+  // ---- Các trang gộp từ lệnh `dashboard` cũ ----
+  overview: ['overview', 'tong quan', 'tongquan', 'dashboard', 'dash', 'trung tam', 'trungtam', 'bang dieu khien', 'bangdieukhien'],
+  switches: ['switches', 'switch', 'cong tac', 'congtac', 'cong tat', 'congtat', 'cttc'],
+  sanction: ['sanction', 'sanctions', 'xu ly', 'xuly', 'hinh phat', 'hinhphat', 'an phat', 'anphat'],
+  health: ['health', 'may moc', 'maymoc', 'suc khoe', 'suckhoe', 'ping', 'ram'],
+  data: ['data', 'du lieu', 'dulieu', 'bao duong', 'baoduong', 'luu', 'save'],
 };
+
+// Mọi trang bảng có thể mở (dùng cho menu chọn trang & kiểm tra hợp lệ).
+const ALL_VIEWS = ['main', 'flagged', 'clusters', 'log'].concat(dash.VIEWS);
+
+const VIEW_MENU = [
+  { value: 'main', label: 'Bảng chống gian lận', emoji: '🛡️', desc: 'Hai hệ thống chống gian lận + xử lý từng người' },
+  { value: 'flagged', label: 'Tài khoản đáng nghi', emoji: '🚩', desc: 'Ai đang bị nghi dùng bot/macro hoặc acc clone' },
+  { value: 'clusters', label: 'Cụm acc clone', emoji: '🔗', desc: 'Các nhóm tài khoản bị nghi của cùng một người' },
+  { value: 'log', label: 'Nhật ký', emoji: '📜', desc: 'Việc đã xảy ra của mọi hệ thống bảo vệ' },
+].concat(
+  dash.VIEWS.map((v) => ({
+    value: v,
+    label: (dash.VIEW_LABELS[v] || {}).label || v,
+    emoji: (dash.VIEW_LABELS[v] || {}).emoji || '▪️',
+    desc: (dash.VIEW_LABELS[v] || {}).desc || '',
+  })),
+);
+
+function viewOptions(current) {
+  return VIEW_MENU.map((v) => {
+    const opt = { label: String(v.label).slice(0, 100), value: v.value, default: current === v.value };
+    if (v.emoji) opt.emoji = v.emoji;
+    if (v.desc) opt.description = String(v.desc).slice(0, 100);
+    return opt;
+  });
+}
 
 function resolveAction(raw) {
   const t = plain(raw);
@@ -219,7 +259,7 @@ function renderMain(client, viewerTag, notice, selectedUser) {
       e.addFields({
         name: '🔍 Báo cáo: <@' + selectedUser + '>' + (rep.trusted ? ' — ⭐ TIN CẬY' : ''),
         value:
-          `💚 Tin cậy ${bar(rep.trust)} **${Math.round(rep.trust)}**/100\n` +
+          `🤝 Tin cậy ${bar(rep.trust)} **${Math.round(rep.trust)}**/100\n` +
           `🤖 Nghi dùng máy ${bar(rep.autoScore)} **${Math.round(rep.autoScore)}**/100 (mẫu: ${rep.autoSamples})\n` +
           `👥 Nghi clone ${bar(rep.risk)} **${Math.round(rep.risk)}**/100 — ${TIER_TEXT[rep.riskTier] || rep.riskTier}\n` +
           `📛 Tuổi acc: **${rep.ageDays == null ? '?' : rep.ageDays.toFixed(1)}** ngày • ⌨️ **${num(rep.cmdCount)}** lệnh • 💬 **${num(rep.msgCount)}** tin\n` +
@@ -319,6 +359,27 @@ function renderPanel(client, viewerTag, notice, view, selectedUser) {
   return renderMain(client, viewerTag, notice, selectedUser);
 }
 
+// Một trang có thể cần nhiều embed (ví dụ nhật ký gộp từ hai nguồn khác nhau).
+function panelEmbeds(client, viewerTag, notice, view, selectedUser) {
+  const note = String(notice == null ? '' : notice).trim();
+
+  // Trang của trung tâm điều khiển (gộp từ lệnh dashboard cũ)
+  if (dash.VIEWS.indexOf(view) !== -1) {
+    const e = dash.renderView(client, view);
+    if (note) e.addFields({ name: '✅ Vừa xong', value: note.slice(0, 1024), inline: false });
+    return [e];
+  }
+
+  // Nhật ký: giữ cả hai nguồn — chống gian lận và công tắc/hệ thống xử lý
+  if (view === 'log') {
+    const main = renderLog();
+    if (note) main.addFields({ name: '✅ Vừa xong', value: note.slice(0, 1024), inline: false });
+    return [main, dash.renderLog()];
+  }
+
+  return [renderPanel(client, viewerTag, note, view, selectedUser)];
+}
+
 function renderLog() {
   const sysLog = store.logEntries(12);
   const swLog = gs.logEntries(8);
@@ -370,6 +431,20 @@ function panelRows(client, disabled, view, selectedUser) {
   const cfg = store.getConfig();
   const rows = [];
 
+  // ---- Hàng 1: menu chọn trang (thay cho loạt nút điều hướng cũ) ----
+  rows.push(
+    new ActionRowBuilder().addComponents(
+      new StringSelectMenuBuilder()
+        .setCustomId('aa:view')
+        .setPlaceholder('📑 Chọn trang muốn xem…')
+        .setMinValues(1)
+        .setMaxValues(1)
+        .setDisabled(off)
+        .addOptions(viewOptions(view)),
+    ),
+  );
+
+  // ---- Hàng 2: công tắc & tiện ích luôn có mặt ----
   rows.push(
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -384,40 +459,24 @@ function panelRows(client, disabled, view, selectedUser) {
         .setEmoji('\ud83d\udc65')
         .setStyle(altOn ? ButtonStyle.Danger : ButtonStyle.Success)
         .setDisabled(off),
+      new ButtonBuilder()
+        .setCustomId('aa:captcha')
+        .setLabel(cfg.captchaEnabled ? 'Tắt câu đố' : 'Bật câu đố')
+        .setEmoji('\ud83e\udde9')
+        .setStyle(cfg.captchaEnabled ? ButtonStyle.Secondary : ButtonStyle.Success)
+        .setDisabled(off),
       new ButtonBuilder().setCustomId('aa:refresh').setLabel('Làm mới').setEmoji('\ud83d\udd04').setStyle(ButtonStyle.Secondary).setDisabled(off),
-      new ButtonBuilder().setCustomId('aa:log').setLabel('Nhật ký').setEmoji('\ud83d\udcdc').setStyle(ButtonStyle.Secondary).setDisabled(off),
       new ButtonBuilder().setCustomId('aa:close').setLabel('Đóng').setEmoji('\u2716\ufe0f').setStyle(ButtonStyle.Secondary).setDisabled(off),
     ),
   );
 
-  const row2 = new ActionRowBuilder();
-  if (view !== 'main') {
-    row2.addComponents(
-      new ButtonBuilder().setCustomId('aa:back').setLabel('Quay lại').setEmoji('\u25c0\ufe0f').setStyle(ButtonStyle.Primary).setDisabled(off),
-    );
+  // ---- Hàng riêng của từng trang trung tâm điều khiển ----
+  const extra = dash.rowsFor(view, off);
+  if (extra.length) {
+    for (const r of extra) rows.push(r);
+    return rows;
   }
-  row2.addComponents(
-    new ButtonBuilder()
-      .setCustomId('aa:flagged')
-      .setLabel('Tài khoản đáng nghi')
-      .setEmoji('\ud83d\udea9')
-      .setStyle(view === 'flagged' ? ButtonStyle.Primary : ButtonStyle.Secondary)
-      .setDisabled(off),
-    new ButtonBuilder()
-      .setCustomId('aa:clusters')
-      .setLabel('Cụm acc clone')
-      .setEmoji('\ud83d\udd17')
-      .setStyle(view === 'clusters' ? ButtonStyle.Primary : ButtonStyle.Secondary)
-      .setDisabled(off),
-    new ButtonBuilder().setCustomId('aa:clearall').setLabel('Gỡ hết khoá').setEmoji('\ud83e\uddf9').setStyle(ButtonStyle.Secondary).setDisabled(off),
-    new ButtonBuilder()
-      .setCustomId('aa:captcha')
-      .setLabel(cfg.captchaEnabled ? 'Tắt câu đố' : 'Bật câu đố')
-      .setEmoji('\ud83e\udde9')
-      .setStyle(cfg.captchaEnabled ? ButtonStyle.Secondary : ButtonStyle.Success)
-      .setDisabled(off),
-  );
-  rows.push(row2);
+  if (view === 'log') return rows;
 
   rows.push(
     new ActionRowBuilder().addComponents(
@@ -481,6 +540,12 @@ function panelRows(client, disabled, view, selectedUser) {
         new ButtonBuilder().setCustomId('aa:unselect').setLabel('Bỏ chọn').setEmoji('\u21a9\ufe0f').setStyle(ButtonStyle.Secondary).setDisabled(off),
       ),
     );
+  } else {
+    rows.push(
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('aa:clearall').setLabel('Gỡ hết khoá').setEmoji('\ud83e\uddf9').setStyle(ButtonStyle.Secondary).setDisabled(off),
+      ),
+    );
   }
 
   return rows;
@@ -491,10 +556,26 @@ function panelRows(client, disabled, view, selectedUser) {
 // =============================================================
 module.exports = {
   name: 'antiabuse',
-  aliases: ['chonggianlan', 'chongbot', 'antibot', 'antialt', 'chongclone', 'aa'],
+  aliases: [
+    'chonggianlan',
+    'chongbot',
+    'antibot',
+    'antialt',
+    'chongclone',
+    'aa',
+    // ---- tên gọi cũ của lệnh dashboard, giữ lại để không ai bị lỡ tay ----
+    'dashboard',
+    'bangdieukhien',
+    'dash',
+    'trungtam',
+    'ownerpanel',
+    'dieukhien',
+  ],
   category: 'owner',
-  description: 'Bật/tắt & theo dõi hai hệ thống chống bot tự động và chống acc clone (chỉ chủ bot)',
-  usage: '[status|on|off|boton|botoff|alton|altoff|preset|check|trust|untrust|clear|clearall|flagged|clusters|log] [@người] [mức]',
+  // Discord chỉ cho phép mô tả lệnh dài tối đa 100 ký tự.
+  description: 'Trung tâm điều khiển của chủ bot: chống bot/macro, acc clone, công tắc, xứ lý, dữ liệu',
+  usage:
+    '[status|on|off|boton|botoff|alton|altoff|preset|check|trust|untrust|clear|clearall|flagged|clusters|log|overview|switches|sanction|health|data] [@người] [mức]',
   cooldown: 3,
   ownerOnly: true,
   slash: true,
@@ -521,6 +602,11 @@ module.exports = {
         { name: 'Danh sách tài khoản đáng nghi', value: 'flagged' },
         { name: 'Danh sách cụm acc clone', value: 'clusters' },
         { name: 'Xem nhật ký', value: 'log' },
+        { name: 'Trang: Tổng quan hệ thống', value: 'overview' },
+        { name: 'Trang: Công tắc toàn cục', value: 'switches' },
+        { name: 'Trang: Hệ thống xử lý', value: 'sanction' },
+        { name: 'Trang: Sức khoẻ máy móc', value: 'health' },
+        { name: 'Trang: Dữ liệu & bảo dưỡng', value: 'data' },
       ],
     },
     { name: 'thành_viên', type: 'user', description: 'Người cần kiểm tra / xử lý', required: false },
@@ -549,6 +635,7 @@ module.exports = {
           Embed.error(
             'Hành động không hợp lệ',
             'Chọn một trong: `status`, `on`, `off`, `boton`, `botoff`, `alton`, `altoff`, `preset`, `check`, `trust`, `untrust`, `clear`, `clearall`, `flagged`, `clusters`, `log`.\n' +
+              'Hoặc mở thẳng một trang: `overview`, `switches`, `sanction`, `health`, `data`.\n' +
               `Ví dụ: \`${p}chongbot\` • \`${p}chongbot off\` • \`${p}chongbot check @người\` • \`${p}chongbot preset strict\``,
           ),
         ],
@@ -572,8 +659,8 @@ module.exports = {
     let view = 'main';
     let selectedUser = targetId || null;
 
-    // ---- Nhật ký ----
-    if (action === 'log') return ctx.reply({ embeds: [renderLog()] });
+    // ---- Nhật ký & các trang của trung tâm điều khiển (mở bảng luôn) ----
+    if (action === 'log' || dash.VIEWS.indexOf(action) !== -1) view = action;
 
     // ---- Đổi mức độ ----
     if (action === 'preset') {
@@ -683,7 +770,7 @@ module.exports = {
     // ---- Hiển thị bảng điều khiển ----
     const viewerTag = ctx.author.tag || ctx.author.username || '';
     const msg = await ctx.reply({
-      embeds: [renderPanel(client, viewerTag, notice, view, selectedUser)],
+      embeds: panelEmbeds(client, viewerTag, notice, view, selectedUser),
       components: panelRows(client, false, view, selectedUser),
     });
     if (!msg || typeof msg.createMessageComponentCollector !== 'function') return;
@@ -702,7 +789,7 @@ module.exports = {
     const refresh = (i, note) =>
       i
         .update({
-          embeds: [renderPanel(client, viewerTag, note, view, selectedUser)],
+          embeds: panelEmbeds(client, viewerTag, note, view, selectedUser),
           components: panelRows(client, false, view, selectedUser),
         })
         .catch(() => {});
@@ -717,17 +804,12 @@ module.exports = {
         }
         if (ended) return i.deferUpdate().catch(() => {});
 
-        // ---- Nhật ký (riêng tư) ----
-        if (i.customId === 'aa:log') {
-          return i.reply({ embeds: [renderLog()], flags: MessageFlags.Ephemeral }).catch(() => {});
-        }
-
         // ---- Đóng ----
         if (i.customId === 'aa:close') {
           ended = true;
           await i
             .update({
-              embeds: [renderPanel(client, viewerTag, '', view, selectedUser)],
+              embeds: panelEmbeds(client, viewerTag, '', view, selectedUser),
               components: panelRows(client, true, view, selectedUser),
             })
             .catch(() => {});
@@ -735,17 +817,10 @@ module.exports = {
           return;
         }
 
-        // ---- Đổi trang ----
-        if (i.customId === 'aa:flagged') {
-          view = 'flagged';
-          return refresh(i, '');
-        }
-        if (i.customId === 'aa:clusters') {
-          view = 'clusters';
-          return refresh(i, '');
-        }
-        if (i.customId === 'aa:back') {
-          view = 'main';
+        // ---- Đổi trang (một menu duy nhất cho cả hai bảng cũ) ----
+        if (i.customId === 'aa:view') {
+          const next = Array.isArray(i.values) && i.values.length ? String(i.values[0]) : 'main';
+          view = ALL_VIEWS.indexOf(next) !== -1 ? next : 'main';
           return refresh(i, '');
         }
 
@@ -855,6 +930,17 @@ module.exports = {
         }
 
         if (i.customId === 'aa:refresh') return refresh(i, '🔄 Đã làm mới.');
+
+        // ---- Nút của trung tâm điều khiển (đã gộp vào bảng này) ----
+        const dashId = i.customId.slice(3);
+        if (dash.ownsAction(dashId)) {
+          const res = await dash.handleAction(i, dashId, {
+            client,
+            ownerTag: i.user.tag || i.user.username || viewerTag,
+          });
+          if (res && res.silent) return;
+          return refresh(i, (res && res.note) || '');
+        }
 
         return i.deferUpdate().catch(() => {});
       } catch (err) {
