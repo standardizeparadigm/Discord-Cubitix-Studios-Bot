@@ -81,6 +81,67 @@ module.exports = {
       return;
     }
 
+    // --- Nút bấm nhanh trong tin nhắn báo án gửi riêng cho chủ bot (LTS) ---
+    // Phải xử lý TOÀN CỤC ở đây, không dùng collector: tin nhắn riêng còn
+    // nằm trong hộp thư rất lâu, kể cả sau khi bot khởi động lại. Nếu dùng
+    // collector thì bấm vào sẽ không có gì xảy ra — rất khó hiểu cho chủ bot.
+    if (
+      typeof interaction.isButton === 'function' &&
+      interaction.isButton() &&
+      typeof interaction.customId === 'string' &&
+      interaction.customId.startsWith('sc:quick:')
+    ) {
+      try {
+        if (interaction.user.id !== client.config.ownerId) {
+          await interaction.reply({ content: '⛔ Chỉ chủ bot dùng được nút này.', ephemeral: true }).catch(() => {});
+          return;
+        }
+        const parts = interaction.customId.split(':');
+        const act = parts[2] || '';
+        const uid = parts[3] || '';
+        if (!/^\d{5,25}$/.test(uid)) {
+          await interaction.reply({ content: '❌ Nút này thiếu ID người dùng.', ephemeral: true }).catch(() => {});
+          return;
+        }
+        const sanctions = require('../core/sanctions');
+        const sstore = require('../core/sanctionStore');
+        const by = interaction.user.tag || interaction.user.username || 'chủ bot';
+        let text = '';
+
+        if (act === 'pardon') {
+          const res = sstore.pardon(uid, by, 'Chủ bot tha ngay từ tin nhắn báo án', true);
+          if (res.ok) {
+            await sanctions.notifyLifted(client, uid, 'pardon', '');
+            text = `🕊️ Đã tha toàn bộ án cho <@${uid}> và xoá sạch lịch sử leo bậc.`;
+          } else {
+            text = '❌ ' + res.error;
+          }
+        } else if (act === 'immune') {
+          sstore.setImmune(uid, true, by);
+          text = `⭐ Đã cho <@${uid}> vào danh sách miễn trừ — máy sẽ không bao giờ tự ra án cho người này nữa.`;
+        } else if (act === 'ban') {
+          const res = await sanctions.manualBan(client, uid, {
+            by,
+            reason: 'Chủ bot xác nhận cấm vĩnh viễn từ tin nhắn báo án',
+          });
+          text =
+            res && res.ok
+              ? `🔴 Đã cấm vĩnh viễn <@${uid}>.`
+              : '❌ ' + String((res && res.error) || 'Không cấm được.');
+        } else {
+          text = '❌ Nút không hợp lệ.';
+        }
+
+        await interaction.reply({ content: text, ephemeral: true }).catch(() => {});
+      } catch (err) {
+        client.logger?.error?.(`Lỗi nút xử lý nhanh: ${err?.message || err}`);
+        if (!interaction.replied && !interaction.deferred) {
+          interaction.reply({ content: '❌ Có lỗi khi xử lý nút này.', ephemeral: true }).catch(() => {});
+        }
+      }
+      return;
+    }
+
     // Chỉ xử lý slash command ở đây.
     // Các nút/menu tương tác khác đều được xử lý ngay trong từng lệnh (collector).
     if (!interaction.isChatInputCommand()) return;
