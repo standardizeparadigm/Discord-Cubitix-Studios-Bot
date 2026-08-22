@@ -3,33 +3,33 @@ chcp 65001 >nul
 title Cubitix Studios - Cai dat thu vien
 cd /d "%~dp0"
 echo ===============================================================
-echo    CUBITIX STUDIOS - CAI DAT THU VIEN (chi lam 1 lan)
+echo    CUBITIX STUDIOS - CÀI ĐẶT THƯ VIỆN ( chỉ làm 1 lần )
 echo ===============================================================
 echo.
 
 where node >nul 2>nul
 if errorlevel 1 (
-  echo [LOI] Chua cai Node.js!
-  echo Vui long tai va cai Node.js 18+ tai: https://nodejs.org
-  echo Sau do chay lai file nay.
+  echo [LỖI] Chưa cài Node.js!
+  echo Vui lòng tải và cài Node.js 18+ tại: https://nodejs.org
+  echo Sau đó chạy lại file này.
   echo.
   pause
   exit /b
 )
 
-echo [1/2] Da tim thay Node.js:
+echo [1/2] Đã tìm thấy Node.js:
 node -v
 echo.
-echo [2/2] Dang cai thu vien (npm install)... vui long doi...
+echo [2/2] Đang cài thư viện (npm install)... vui lòng đợi...
 echo.
 call npm install
 echo.
 if errorlevel 1 (
-  echo [LOI] Cai dat that bai. Kiem tra ket noi mang roi thu lai.
+  echo [LỖI] Cài đặt thất bại. Kiem tra ket noi mang roi thu lai.
 ) else (
-  echo [OK] Da cai xong! Bay gio ban co the chay bot.
-  echo   - Chay AN: bam dup START_BOT_AN_TERMINAL.vbs
-  echo   - Chay CO cua so: bam dup START_BOT.bat
+  echo [OK] Đã cài xong! Bây giờ bạn có thể chạy bot.
+  echo   - Chạy ẨN: bấm đúp START_BOT_AN_TERMINAL.vbs
+  echo   - Chạy CÓ cửa sổ: bấm đúp START_BOT.bat
 )
 echo.
 pause
