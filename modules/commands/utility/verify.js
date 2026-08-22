@@ -33,7 +33,7 @@ const TIER_TEXT = {
   freeze: '🔴 Bị phong toả',
 };
 
-// Dụng bảng trạng thái cá nhân.
+// Dựng bảng trạng thái cá nhân.
 function statusEmbed(rep, ctx) {
   const on = { auto: guard.isAutomationOn(), alt: guard.isAltOn() };
   const now = Date.now();
@@ -42,7 +42,7 @@ function statusEmbed(rep, ctx) {
     return Embed.custom(
       colors.success,
       '✅ Tài khoản của bạn hoàn toàn bình thường',
-      'Hệ thống chưa ghi nhận bất kỳ dấu hiệu đáng nghi nào từ bạn. Bạn không cần làm gì cả, chứ chơi bình thường thôi!',
+      'Hệ thống chưa ghi nhận bất kỳ dấu hiệu đáng nghi nào từ bạn. Bạn không cần làm gì cả, cứ chơi bình thường thôi!',
     ).addFields(
       { name: '🤖 Chống bot tự động', value: on.auto ? '🟢 Đang bật' : '⚪ Đang tắt', inline: true },
       { name: '👥 Chống acc clone', value: on.alt ? '🟢 Đang bật' : '⚪ Đang tắt', inline: true },
