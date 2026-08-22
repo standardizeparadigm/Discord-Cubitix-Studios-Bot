@@ -1,3 +1,15 @@
+// =============================================================
+//  captcha - XÁC MINH NGƯỜI THẬT bằng câu đố nhỏ
+//
+//  Khi hệ thống chống bot thấy dấu hiệu đáng nghi, ta KHÔNG cấm ngay
+//  (dễ oan người chơi thật) mà yêu cầu giải một câu đố rất nhanh.
+//  Người thật mất 2-5 giây là xong; macro thì không biết bấm gì.
+//
+//  Ba lớp bảo vệ của câu đố:
+//   1) Nội dung sinh ngẫu nhiên mỗi lần (không học thuộc được).
+//   2) Vị trí nút bấm tráo ngẫu nhiên (autoclicker bấm mù sẽ sai).
+//   3) Trả lời nhanh hơn sức người (ví dụ dưới 0,4 giây) cũng bị coi là trượt.
+// =============================================================
 'use strict';
 
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, MessageFlags } = require('discord.js');
